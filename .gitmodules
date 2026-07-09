@@ -1,0 +1,3 @@
+[submodule "scx-ext"]
+	path = scx-ext
+	url = git@github.com:sched-ext/scx-scheds-packaging-arch.git

@@ -1,0 +1,25 @@
+pkgbase = ttc-monocraft
+	pkgdesc = A monospaced programming font inspired by the Minecraft typeface
+	pkgver = 4.2.1
+	pkgrel = 1
+	url = https://github.com/IdreesInc/Monocraft
+	arch = any
+	license = OFL-1.1
+	provides = ttc-monocraft
+	conflicts = ttc-monocraft
+	source = Monocraft-nerd-fonts-patched-4.2.1.ttc::https://github.com/IdreesInc/Monocraft/releases/download/v4.2.1/Monocraft-nerd-fonts-patched.ttc
+	source = Monocraft-no-ligatures-4.2.1.ttc::https://github.com/IdreesInc/Monocraft/releases/download/v4.2.1/Monocraft-no-ligatures.ttc
+	source = Monocraft-4.2.1.ttc::https://github.com/IdreesInc/Monocraft/releases/download/v4.2.1/Monocraft.ttc
+	source = Monocraft-4.2.1-LICENSE::https://raw.githubusercontent.com/IdreesInc/Monocraft/refs/heads/main/LICENSE
+	sha256sums = 67f88ff9e7c6560f6cf60fb062fd353a72f62dc2654462950c65b63ed53d9754
+	sha256sums = 93ee79ba62b7d0a653dfd90d5c519f949e3ad64ec483046b417f2cc6943831d0
+	sha256sums = 0ea1aea12f03d552a469fc017f19ea927b53bf9d21e60a41c5c476c3faf3c7f9
+	sha256sums = f69c147003e052dbc9d96c40a9f73647e72766cfda95a597b94ed827fe25acb1
+
+pkgname = ttc-monocraft-nerd-fonts-patched
+	pkgdesc = A monospaced programming font inspired by the Minecraft typeface (nerd fonts patched)
+
+pkgname = ttc-monocraft-no-ligatures
+	pkgdesc = A monospaced programming font inspired by the Minecraft typeface (no ligatures)
+
+pkgname = ttc-monocraft

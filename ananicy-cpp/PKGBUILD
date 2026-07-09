@@ -1,0 +1,67 @@
+# Maintainer: Peter Jung <ptr1337@archlinux.org>
+# Contributor: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
+# Contributor: Antoine Viallon <antoine@lesviallon.fr>
+
+pkgname=ananicy-cpp
+pkgver=1.2.0
+pkgrel=1
+pkgdesc="Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage."
+arch=(x86_64)
+url="https://gitlab.com/ananicy-cpp/ananicy-cpp"
+license=('GPL-3.0-or-later')
+depends=(
+  glibc
+  libgcc
+  libbpf
+  libelf
+  libfmt.so
+  libspdlog.so
+  libstdc++
+  pcre2
+  zlib
+)
+makedepends=(
+  bpf
+  "clang>=10"
+  cmake
+  git
+  ninja
+  nlohmann-json
+)
+source=("$pkgname-v$pkgver.tar.gz::$url/-/archive/v$pkgver/$pkgname-v$pkgver.tar.gz")
+sha256sums=('d75157b9588748ce6ae04c3e2d71625d8eec6bf2d23e06f8cb6f9687c74813f7')
+prepare() {
+  cd "${srcdir}/${pkgname}-v${pkgver}"
+  sed -i '1s/^/#include <unistd.h>\n/' src/platform/linux/process.cpp
+  sed -i '1s/^/#include <unistd.h>\n/' src/platform/linux/debug.cpp
+  sed -i '1s/^/#include <cstdint>\n/' src/platform/linux/backtrace.cpp
+  sed -i '1s/^/#include <cstring>\n/' src/platform/linux/singleton_process.cpp
+  sed -i '1s/^/#include <cstring>\n/' src/utility/argument_parsing/argument.cpp
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-v${pkgver}"
+
+  cmake -S . -Bbuild \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DUSE_EXTERNAL_SPDLOG=ON \
+        -DUSE_EXTERNAL_JSON=ON \
+        -DUSE_EXTERNAL_FMTLIB=ON \
+        -DENABLE_SYSTEMD=OFF \
+        -DUSE_BPF_PROC_IMPL=ON \
+        -DBPF_BUILD_LIBBPF=OFF \
+        -DENABLE_REGEX_SUPPORT=ON \
+        -DVERSION=${pkgver}
+
+  cmake --build build --target ananicy-cpp
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-v${pkgver}"
+  DESTDIR="${pkgdir}" cmake --install build --component Runtime
+
+  install -m755 -d "${pkgdir}/etc/ananicy.d"
+}
+
