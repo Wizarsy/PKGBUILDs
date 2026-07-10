@@ -1,3 +1,10 @@
-**/*.zst
-**/*.gz
-**/.cargo
+*
+
+!**/PKGBUILD
+!**/REUSE.toml
+!**/LICENSE
+!**/.SRCINFO
+!**/0BSD.txt
+
+!**/.gitmodules
+!**/.gitignore
