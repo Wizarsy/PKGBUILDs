@@ -1,10 +1,8 @@
-# Maintainer: Peter Jung <ptr1337@archlinux.org>
-# Contributor: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
-# Contributor: Antoine Viallon <antoine@lesviallon.fr>
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
 pkgname=ananicy-cpp
 pkgver=1.2.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage."
 arch=(x86_64)
 url="https://gitlab.com/ananicy-cpp/ananicy-cpp"
@@ -28,10 +26,12 @@ makedepends=(
   ninja
   nlohmann-json
 )
-source=("$pkgname-v$pkgver.tar.gz::$url/-/archive/v$pkgver/$pkgname-v$pkgver.tar.gz")
-sha256sums=('d75157b9588748ce6ae04c3e2d71625d8eec6bf2d23e06f8cb6f9687c74813f7')
+source=("git+https://gitlab.com/ananicy-cpp/ananicy-cpp.git#tag=v$pkgver")
+sha256sums=('21f07abc1e7aff9e90767e1a831920a74ee2be49d16099b1484c48081376dcc6')
+
 prepare() {
-  cd "${srcdir}/${pkgname}-v${pkgver}"
+  cd "$srcdir/$pkgname"
+
   sed -i '1s/^/#include <unistd.h>\n/' src/platform/linux/process.cpp
   sed -i '1s/^/#include <unistd.h>\n/' src/platform/linux/debug.cpp
   sed -i '1s/^/#include <cstdint>\n/' src/platform/linux/backtrace.cpp
@@ -40,11 +40,11 @@ prepare() {
 }
 
 build() {
-  cd "${srcdir}/${pkgname}-v${pkgver}"
+  cd "$srcdir/$pkgname"
 
   cmake -S . -Bbuild \
         -GNinja \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=None \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DUSE_EXTERNAL_SPDLOG=ON \
         -DUSE_EXTERNAL_JSON=ON \
@@ -59,9 +59,9 @@ build() {
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-v${pkgver}"
+  cd "$srcdir/$pkgname"
+
   DESTDIR="${pkgdir}" cmake --install build --component Runtime
 
   install -m755 -d "${pkgdir}/etc/ananicy.d"
 }
-
