@@ -2,36 +2,38 @@
 
 pkgname=ananicy-cpp
 pkgver=1.2.0
-pkgrel=2
-pkgdesc="Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage."
+pkgrel=1
+pkgdesc='Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage'
 arch=(x86_64)
-url="https://gitlab.com/ananicy-cpp/ananicy-cpp"
+url=https://gitlab.com/ananicy-cpp/ananicy-cpp
 license=('GPL-3.0-or-later')
 depends=(
-  glibc
-  libgcc
+  # glibc
+  # libgcc
+  # libelf
+  # libstdc++
   libbpf
-  libelf
-  "libfmt.so>=8.0"
-  "libspdlog.so>=1.9"
-  libstdc++
+  fmt
+  spdlog 
   pcre2
   zlib
 )
 makedepends=(
-  gcc15
   bpf
-  "clang>=10"
-  "cmake>=3.17"
+  clang
+  cmake
+  lld
+  llvm
   git
   ninja
-  "nlohmann-json>=3.9"
+  nlohmann-json
+  # gcc15
 )
-source=("git+https://gitlab.com/ananicy-cpp/ananicy-cpp.git#tag=v$pkgver")
+source=(git+https://gitlab.com/ananicy-cpp/ananicy-cpp.git#tag=v${pkgver})
 sha256sums=('21f07abc1e7aff9e90767e1a831920a74ee2be49d16099b1484c48081376dcc6')
 
 prepare() {
-  cd "$srcdir/$pkgname"
+  cd $pkgname
 
   sed -i '1s/^/#include <unistd.h>\n/' src/platform/linux/process.cpp
   sed -i '1s/^/#include <unistd.h>\n/' src/platform/linux/debug.cpp
@@ -41,31 +43,66 @@ prepare() {
 }
 
 build() {
-  cd "$srcdir/$pkgname"
-
-  export CXX="/usr/bin/g++-15"
-  export CC="/usr/bin/gcc-15"
+  # CC=gcc-15
+  # CXX=g++-15
+  # AR=gcc-ar-15
+  # NM=gcc-nm-15
+  # RANLIB=gcc-ranlib-15
   
-  cmake -S . -Bbuild \
-        -GNinja \
-        -DCMAKE_BUILD_TYPE=None \
-        -DCMAKE_INSTALL_PREFIX=/usr \
-        -DUSE_EXTERNAL_SPDLOG=ON \
-        -DUSE_EXTERNAL_JSON=ON \
-        -DUSE_EXTERNAL_FMTLIB=ON \
-        -DENABLE_SYSTEMD=OFF \
-        -DUSE_BPF_PROC_IMPL=ON \
-        -DBPF_BUILD_LIBBPF=OFF \
-        -DENABLE_REGEX_SUPPORT=ON \
-        -DVERSION=${pkgver}
+  # export CC CXX NM AR RANLIB 
+  
+  # cmake -S $pkgname -B build -G Ninja \
+  #       -DCMAKE_BUILD_TYPE=Release \
+  #       -DCMAKE_INSTALL_PREFIX=/usr \
+  #       -DCMAKE_SKIP_RPATH=ON \
+  #       -DCMAKE_C_FLAGS="${CFLAGS}" \
+  #       -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
+  #       -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+  #       -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}" \
+  #       -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}" \
+  #       -DCMAKE_AR="/usr/bin/${AR}" \
+  #       -DCMAKE_RANLIB="/usr/bin/${RANLIB}" \
+  CC=clang
+  CXX=clang++
+  LD=ld.lld
+  AR=llvm-ar
+  NM=llvm-nm
+  STRIP=llvm-strip
+  OBJCOPY=llvm-objcopy
+  OBJDUMP=llvm-objdump
+  RANLIB=llvm-ranlib
+  READELF=llvm-readelf
 
-  cmake --build build --target ananicy-cpp
+  export CC CXX LD AR NM STRIP OBJCOPY OBJDUMP RANLIB READELF
+
+  LINKER="${LDFLAGS} -fuse-ld=lld"
+
+  cmake -S $pkgname -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DCMAKE_C_FLAGS="${CFLAGS} -fsplit-lto-unit" \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -fsplit-lto-unit" \
+    -DCMAKE_EXE_LINKER_FLAGS="${LINKER}" \
+    -DCMAKE_MODULE_LINKER_FLAGS="${LINKER}" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${LINKER}" \
+    -DCMAKE_AR="/usr/bin/${AR}" \
+    -DCMAKE_RANLIB="/usr/bin/${RANLIB}" \
+    -DVERSION=${pkgver} \
+    -DUSE_EXTERNAL_SPDLOG=ON \
+    -DUSE_EXTERNAL_JSON=ON \
+    -DUSE_EXTERNAL_FMTLIB=ON \
+    -DUSE_BPF_PROC_IMPL=ON \
+    -DENABLE_REGEX_SUPPORT=ON \
+    -DBPF_BUILD_LIBBPF=OFF \
+    -DENABLE_SYSTEMD=OFF
+
+  cmake --build build --target $pkgname
 }
 
 package() {
-  cd "$srcdir/$pkgname"
-
   DESTDIR="${pkgdir}" cmake --install build --component Runtime
-
   install -m755 -d "${pkgdir}/etc/ananicy.d"
+  install -Dm644 "${pkgname}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }

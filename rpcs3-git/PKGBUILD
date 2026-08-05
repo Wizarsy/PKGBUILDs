@@ -1,0 +1,199 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+_pkgname=rpcs3
+pkgname=$_pkgname-git
+pkgver=0.0.42.r19689.daa43790
+pkgrel=1
+pkgdesc='A Sony PlayStation 3 emulator'
+arch=(x86_64)
+url=https://github.com/RPCS3/rpcs3
+license=(GPL-2.0-only)
+depends=(
+  qt6-base
+  qt6-declarative
+  qt6-multimedia
+  qt6-svg
+  glew
+  openal
+  sdl3
+  vulkan-icd-loader
+  libgl
+  zlib
+  curl
+  pugixml
+  llvm
+  opencv
+  ffmpeg
+  libevdev
+  libudev.so
+  zstd
+  glslang
+  miniupnpc
+  hidapi
+  libpng
+  libusb
+  protobuf
+  rtmidi
+  # wolfssl
+  # faudio
+  # vulkan-memory-allocator
+  # cubeb
+)
+optdepends=(
+  rpcs3-udev
+  vulkan-validation-layers
+)
+makedepends=(
+  clang
+  cmake
+  ninja
+  git
+  libglvnd
+  lld
+  python
+  vulkan-headers
+)
+provides=(rpcs3)
+# conflicts=(rpcs3)
+options=(
+  !emptydirs
+  !lto
+  !strip
+)
+source=(
+  git+https://github.com/RPCS3/rpcs3.git
+  git+https://github.com/ip7z/7zip.git
+  git+https://github.com/FNA-XNA/FAudio.git
+  git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+  git+https://github.com/RPCS3/soundtouch.git
+  git+https://github.com/asmjit/asmjit.git
+  git+https://github.com/mozilla/cubeb.git
+  git+https://github.com/Vestrel/discord-rpc
+  git+https://github.com/FeralInteractive/gamemode.git
+  git+https://github.com/xioTechnologies/Fusion.git
+  git+https://github.com/nothings/stb.git
+  git+https://github.com/wolfSSL/wolfssl.git
+  git+https://github.com/RPCS3/yaml-cpp.git
+  git+https://github.com/arsenm/sanitizers-cmake.git
+)
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $_pkgname
+
+  COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' rpcs3/rpcs3_version.cpp)
+  COMM_COUNT="$(git rev-list --count HEAD)"
+  COMM_HASH="$(git rev-parse --short=8 HEAD)"
+  echo "${COMM_TAG}.r${COMM_COUNT}.${COMM_HASH}"
+}
+
+prepare() {
+  cd $_pkgname
+
+  submodules=(3rdparty/{cubeb/cubeb,yaml-cpp,FAudio,wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator})
+  for submodule in ${submodules[@]}; do
+    git submodule init ${submodule}
+    git config submodule.${submodule}.url "${srcdir}/${submodule##*/}"
+    git -c protocol.file.allow=always submodule update ${submodule}
+  done
+
+  git submodule init 3rdparty/asmjit/asmjit
+  git config submodule.asmjit.url "${srcdir}/asmjit"
+  git -c protocol.file.allow=always submodule update 3rdparty/asmjit/asmjit
+
+  git submodule init 3rdparty/feralinteractive/feralinteractive
+  git config submodule.3rdparty/feralinteractive/feralinteractive.url "${srcdir}/gamemode"
+  git -c protocol.file.allow=always submodule update 3rdparty/feralinteractive/feralinteractive
+
+  git submodule init 3rdparty/fusion/fusion
+  git config submodule.3rdparty/fusion/fusion.url "${srcdir}/Fusion"
+  git -c protocol.file.allow=always submodule update 3rdparty/fusion/fusion
+
+  cd 3rdparty/cubeb/cubeb
+  git submodule init cmake/sanitizers-cmake
+  git config submodule.cmake/sanitizers-cmake.url "${srcdir}/sanitizers-cmake"
+  git -c protocol.file.allow=always submodule update cmake/sanitizers-cmake
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LD=ld.lld
+  AR=llvm-ar
+  NM=llvm-nm
+  STRIP=llvm-strip
+  OBJCOPY=llvm-objcopy
+  OBJDUMP=llvm-objdump
+  RANLIB=llvm-ranlib
+  READELF=llvm-readelf
+
+  export CC CXX LD AR NM STRIP OBJCOPY OBJDUMP RANLIB READELF
+
+  LINKER="${LDFLAGS} -fuse-ld=lld"
+
+  cmake -S $_pkgname -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DCMAKE_C_FLAGS="${CFLAGS}" \
+    -DCMAKE_CXX_FLAGS="${CFLAGS}" \
+    -DCMAKE_EXE_LINKER_FLAGS="${LINKER}" \
+    -DCMAKE_MODULE_LINKER_FLAGS="${LINKER}" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${LINKER}" \
+    -DCMAKE_AR="/usr/bin/${AR}" \
+    -DCMAKE_RANLIB="/usr/bin/${RANLIB}" \
+    -DOpenGL_GL_PREFERENCE=GLVND \
+    -DUSE_PRECOMPILED_HEADERS=OFF  \
+    -DUSE_NATIVE_INSTRUCTIONS=OFF \
+    -DBUILD_LLVM=OFF \
+    -DSTATIC_LINK_LLVM=OFF \
+    -DWITH_LLVM=ON \
+    -DUSE_LTO=ON \
+    -DUSE_DISCORD_RPC=ON \
+    -DUSE_SDL=ON \
+    -DUSE_FAUDIO=ON \
+    -DUSE_LIBEVDEV=ON \
+    -DUSE_VULKAN=ON \
+    -DUSE_SYSTEM_CURL=ON \
+    -DUSE_SYSTEM_FFMPEG=ON \
+    -DUSE_SYSTEM_PROTOBUF=ON \
+    -DUSE_SYSTEM_GLSLANG=ON \
+    -DUSE_SYSTEM_HIDAPI=ON \
+    -DUSE_SYSTEM_LIBPNG=ON \
+    -DUSE_SYSTEM_LIBUSB=ON \
+    -DUSE_SYSTEM_MINIUPNPC=ON \
+    -DUSE_SYSTEM_OPENAL=ON \
+    -DUSE_SYSTEM_OPENCV=ON \
+    -DUSE_SYSTEM_PUGIXML=ON \
+    -DUSE_SYSTEM_RTMIDI=ON \
+    -DUSE_SYSTEM_SDL=ON \
+    -DUSE_SYSTEM_ZLIB=ON \
+    -DUSE_SYSTEM_ZSTD=ON \
+    -DUSE_SYSTEM_WOLFSSL=OFF \
+    -DUSE_SYSTEM_VULKAN_MEMORY_ALLOCATOR=OFF \
+    -DUSE_SYSTEM_FAUDIO=OFF \
+    -DUSE_SYSTEM_CUBEB=OFF \
+    -DBUILD_RPCS3_TESTS=OFF \
+    -DRUN_RPCS3_TESTS=OFF
+  
+  cmake --build build
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+  install -Dm644 "${_pkgname}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
