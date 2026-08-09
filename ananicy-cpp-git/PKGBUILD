@@ -1,0 +1,95 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+_pkgname=ananicy-cpp
+pkgname=${_pkgname}-git
+pkgver=1.2.0.r1.ga42a187
+pkgrel=1
+pkgdesc='Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage'
+arch=(x86_64)
+url=https://gitlab.com/ananicy-cpp/ananicy-cpp
+license=(GPL-3.0-or-later)
+depends=(
+  # glibc
+  # libgcc
+  # libelf
+  # libstdc++
+  fmt
+  libbpf
+  pcre2
+  spdlog 
+  zlib
+)
+makedepends=(
+  bpf
+  clang
+  cmake
+  git
+  lld
+  llvm
+  ninja
+  nlohmann-json
+)
+options=(!lto)
+provides=($_pkgname)
+conflicts=($_pkgname)
+source=(
+  git+${url}.git
+  fix-missing-headers.patch
+)
+sha256sums=('SKIP'
+            '11c0ae8c1c544275cf17063676ab4523cfb9e7b39ee1e71eef9d613eeb807ea8')
+
+pkgver() {
+  cd $_pkgname
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd $_pkgname
+
+  patch -p1 < ../fix-missing-headers.patch
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS
+
+  cmake_default_flags=(
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    -DCMAKE_SKIP_RPATH=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS}"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
+
+  cmake -S $_pkgname -B build -G Ninja \
+    "${cmake_default_flags[@]}" \
+    -DVERSION=${pkgver} \
+    -DUSE_EXTERNAL_SPDLOG=ON \
+    -DUSE_EXTERNAL_JSON=ON \
+    -DUSE_EXTERNAL_FMTLIB=ON \
+    -DUSE_BPF_PROC_IMPL=ON \
+    -DENABLE_REGEX_SUPPORT=ON \
+    -DBPF_BUILD_LIBBPF=OFF \
+    -DENABLE_SYSTEMD=OFF
+
+  cmake --build build --target $_pkgname
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build --component Runtime
+  install -m755 -d "${pkgdir}/etc/ananicy.d"
+  install -Dm644 "${_pkgname}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

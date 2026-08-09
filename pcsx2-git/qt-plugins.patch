@@ -1,0 +1,31 @@
+diff --color -ura a/cmake/BuildParameters.cmake b/cmake/BuildParameters.cmake
+--- a/cmake/BuildParameters.cmake	2026-08-08 14:25:16.833861148 -0300
++++ b/cmake/BuildParameters.cmake	2026-08-08 15:03:26.308341594 -0300
+@@ -211,10 +211,12 @@
+ 
+ if(PACKAGE_MODE)
+ 	file(RELATIVE_PATH relative_datadir ${CMAKE_INSTALL_FULL_BINDIR} ${CMAKE_INSTALL_FULL_DATADIR}/PCSX2)
++	file(RELATIVE_PATH relative_libdir ${CMAKE_INSTALL_FULL_BINDIR} ${CMAKE_INSTALL_FULL_LIBDIR}/PCSX2)
+ 
+ 	# Compile all source codes with those defines
+ 	list(APPEND PCSX2_DEFS
+-		PCSX2_APP_DATADIR="${relative_datadir}")
++		PCSX2_APP_DATADIR="${relative_datadir}"
++		PCSX2_APP_LIBDIR="${relative_libdir}")
+ endif()
+ 
+ 
+diff --color -ura a/pcsx2-qt/QtHost.cpp b/pcsx2-qt/QtHost.cpp
+--- a/pcsx2-qt/QtHost.cpp	2026-08-08 14:25:16.844861396 -0300
++++ b/pcsx2-qt/QtHost.cpp	2026-08-08 16:50:49.644480630 -0300
+@@ -2471,6 +2471,10 @@
+ 
+ 	PCSX2MainApplication app(argc, argv);
+ 
++#if defined(__linux__) && defined(PCSX2_APP_LIBDIR)
++  PCSX2MainApplication::addLibraryPath(QStringLiteral("%1/%2/plugins").arg(app.applicationDirPath()).arg(PCSX2_APP_LIBDIR));
++#endif
++
+ 	QtHost::InitializeClipboard();
+ 
+ #ifndef _WIN32

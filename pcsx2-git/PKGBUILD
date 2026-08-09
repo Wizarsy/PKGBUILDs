@@ -1,0 +1,216 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+_pkgname=pcsx2
+pkgname=${_pkgname}-git
+pkgver=2.7.518.r0.gd88510e
+pkgrel=1
+pkgdesc='A Sony PlayStation 2 emulator'
+arch=(x86_64)
+url=https://github.com/PCSX2/pcsx2
+license=(GPL-3.0-only)
+depends=(
+  # curl
+  ffmpeg
+  hicolor-icon-theme
+  kddockwidgets
+  libbacktrace
+  # libpng
+  # libwebp
+  # libdbus-1.so
+  libgl
+  libpcap
+  libudev.so
+  libxi
+  libxrandr
+  qt6-base
+  qt6-declarative
+  sdl3
+  shaderc
+  # libjpeg-turbo
+  # zlib
+  # zstd
+  # lz4
+)
+# optdepends=(
+# )
+makedepends=(
+  clang
+  cmake
+  extra-cmake-modules
+  git
+  libglvnd
+  lld
+  llvm
+  ninja
+  pkgconf
+  qt6-tools
+  vulkan-headers
+)
+provides=($_pkgname)
+conflicts=($_pkgname)
+options=(
+  !emptydirs
+  !lto
+)
+source=(
+  git+${url}.git
+  qt-plugins.patch
+  git+https://github.com/sammycage/plutovg.git#tag=v1.3.2
+  git+https://github.com/sammycage/plutosvg.git#tag=v0.0.7
+  git+https://github.com/jurplel/QtApng.git#tag=1.3.0
+  git+https://github.com/pnggroup/libpng.git#tag=v1.6.58
+  https://download.sourceforge.net/libpng-apng/libpng-1.6.58-apng.patch.gz
+  git+https://github.com/biojppm/rapidyaml.git#tag=v0.12.1
+  git+https://github.com/biojppm/c4core.git
+  git+https://github.com/biojppm/cmake.git
+  git+https://github.com/biojppm/debugbreak.git
+  git+https://github.com/fastfloat/fast_float.git
+)
+sha256sums=('SKIP'
+            'a4c5380ad6cf9a563dd809ab74d2f24b4d8c7eb5adef53a718d0536a959c2ffb'
+            '72952e7aab0ead0e2d667674699f63435f69421fac3fbe1ff4280900f73f093e'
+            'ef0d243dd1ba49503df3e6fd72799b388ed6e4ffde63659e94036d6ec616e93c'
+            'b69518cbf08a62496d992a76bb80c5f7b419fc0f3895880ff40bdeaef9e83218'
+            '07900c2e616ce58dda6b30ec444bbe662b51c0bdd0bc7e02ba053ec83f009df5'
+            'eee7dea22ed502868017971c86c63c4ed1e6085de0baebfdcc3d3322f00f3eb0'
+            '4c530168b9f0f94bce257dcc8e94783fcb23eae5dfdd6a500e360d1623b7858d'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $_pkgname
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd $_pkgname
+
+  patch -p1 < ../qt-plugins.patch
+
+  cd "${srcdir}/libpng"
+  patch -p1 < "${srcdir}/libpng-1.6.58-apng.patch"
+
+  cd "${srcdir}/QtApng"
+  patch -p1 < "${srcdir}/${_pkgname}/.github/workflows/scripts/common/qtapng-cmake.patch"
+
+  cd "${srcdir}/rapidyaml"
+  git submodule set-url ext/c4core "${srcdir}/c4core"
+  git -c protocol.file.allow=always submodule update --init ext/c4core
+
+  cd ext/c4core
+  for submodule in cmake src/c4/ext/{debugbreak,fast_float}; do
+    git submodule set-url ${submodule} "${srcdir}/${submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init ${submodule}
+  done
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS
+
+  external_deps="${srcdir}/deps"
+
+  cmake_default_flags=(
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_RPATH="/usr/lib/${_pkgname^^}"
+    -DCMAKE_PREFIX_PATH="${external_deps}"
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS}"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
+
+  cd "${srcdir}/libpng"
+  cmake -B build -G Ninja \
+    "${cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${external_deps}" \
+    -DBUILD_SHARED_LIBS=ON \
+    -DPNG_SHARED=ON \
+    -DPNG_TESTS=OFF \
+    -DPNG_STATIC=OFF \
+    -DPNG_TOOLS=OFF
+  cmake --build build
+  cmake --install build
+
+  cd "${srcdir}/QtApng"
+  cmake -B build -G Ninja \
+    "${cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${external_deps}"
+  cmake --build build
+  cmake --install build
+
+  cd "${srcdir}/plutovg"
+  cmake -B build -G Ninja \
+    "${cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${external_deps}" \
+    -DBUILD_SHARED_LIBS=ON \
+    -DPLUTOVG_BUILD_EXAMPLES=OFF 
+  cmake --build build
+  cmake --install build
+
+  cd "${srcdir}/plutosvg"
+  cmake -B build -G Ninja \
+    "${cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${external_deps}" \
+    -DBUILD_SHARED_LIBS=ON \
+    -DPLUTOSVG_ENABLE_FREETYPE=OFF \
+    -DPLUTOSVG_BUILD_EXAMPLES=OFF
+  cmake --build build
+  cmake --install build
+
+  cd "${srcdir}/rapidyaml"
+  cmake -B build -G Ninja \
+    "${cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${external_deps}" \
+    -DBUILD_SHARED_LIBS=ON
+  cmake --build build
+  cmake --install build
+
+  cd "${srcdir}"
+
+  cmake -S $_pkgname -B build -G Ninja \
+    "${cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DOpenGL_GL_PREFERENCE=GLVND \
+    -DDISABLE_ADVANCE_SIMD=ON \
+    -DENABLE_QT_UI=ON \
+    -DPACKAGE_MODE=ON \
+    -DENABLE_TESTS=OFF \
+    -DENABLE_GSRUNNER=OFF \
+    -DENABLE_SETCAP=OFF \
+    -DUSE_LINKED_FFMPEG=OFF \
+    -DFFMPEG_INCLUDE_DIRS="${srcdir}/${_pkgname}/3rdparty/ffmpeg/include"
+  
+  cmake --build build
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+  install -Dm644 "${srcdir}/${_pkgname}/.github/workflows/scripts/linux/pcsx2-qt.desktop" "${pkgdir}/usr/share/applications/net.pcsx2.PCSX2.desktop"
+  install -Dm644 "${pkgdir}/usr/share/PCSX2/resources/icons/AppIconLarge.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/PCSX2.png"
+  
+  mkdir -p "${pkgdir}/usr/share/metainfo"
+  cd "${srcdir}/${_pkgname}"
+  ".github/workflows/scripts/linux/generate-metainfo.sh" "${pkgdir}/usr/share/metainfo/net.pcsx2.PCSX2.appdata.xml"
+
+  for obj in "${srcdir}/deps/lib/${obj}"/{libpng16.so.16,libryml.so.0.12.1,libplutosvg.so.0,libplutovg.so.1}; do
+    install -Dm644 "${obj}" "${pkgdir}/usr/lib/${_pkgname^^}/${obj##*/}"
+  done
+
+  install -Dm755 -d "${pkgdir}/usr/lib/${_pkgname^^}/plugins/imageformats"
+  install -Dm644 ${srcdir}/deps/plugins/imageformats/* "${pkgdir}/usr/lib/${_pkgname^^}/plugins/imageformats"
+
+  install -Dm644 "${srcdir}/${_pkgname}/COPYING.GPLv3" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING.GPLv3"
+}

@@ -1,0 +1,171 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+_pkgname=dolphin-emu
+pkgname=${_pkgname}-git
+pkgver=2606.r292.gcd3ea81
+pkgrel=1
+pkgdesc='A Nintendo Wii and GameCube emulator'
+arch=(x86_64)
+url=https://github.com/dolphin-emu/dolphin
+license=(GPL-2.0-or-later)
+depends=(
+  bluez-libs
+  # bzip2
+  # cubeb
+  # curl
+  enet
+  ffmpeg
+  fmt
+  glslang
+  gettext
+  hicolor-icon-theme
+  # hidapi
+  libevdev
+  # libusb
+  libiconv
+  libgl
+  libudev.so
+  libspng
+  llvm
+  # lz4
+  lzo
+  minizip-ng
+  miniupnpc
+  pugixml
+  qt6-base
+  qt6-svg
+  sdl3
+  sfml
+  # vulkan-memory-allocator
+  xxhash
+  # xz
+  zlib-ng
+  # zstd  
+)
+makedepends=(
+  clang
+  cmake
+  git
+  libglvnd
+  linux-headers
+  lld
+  ninja
+  pkgconf
+  python
+  vulkan-headers
+)
+options=(
+  !emptydirs
+  !lto
+)
+provides=($_pkgname)
+conflicts=($_pkgname)
+source=(
+  # ${pkgname}::git+${url}.git#tag=${pkgver}
+  ${_pkgname}::git+${url}.git
+  git+https://github.com/mgba-emu/mgba.git
+  git+https://github.com/mozilla/cubeb.git
+  git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+  git+https://github.com/RetroAchievements/rcheevos.git
+  git+https://github.com/ocornut/imgui.git
+  git+https://github.com/epezent/implot.git
+  git+https://github.com/syoyo/tinygltf.git
+  git+https://github.com/e-dant/watcher.git
+  git+https://github.com/mutouyun/cpp-ipc.git
+  git+https://github.com/weisslj/cpp-optparse.git
+  git+https://github.com/arsenm/sanitizers-cmake.git
+)
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $_pkgname
+
+  git describe --long --tags --abbrev=7 | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd $_pkgname
+
+  submodules=(Externals/{cubeb/cubeb,mGBA/mgba,cpp-ipc/cpp-ipc,cpp-optparse/cpp-optparse,imgui/imgui,implot/implot,tinygltf/tinygltf,rcheevos/rcheevos,watcher/watcher,VulkanMemoryAllocator})
+  for submodule in ${submodules[@]}; do
+    git submodule set-url ${submodule} "${srcdir}/${submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init ${submodule}
+  done
+  cd Externals/cubeb/cubeb
+  git submodule set-url cmake/sanitizers-cmake "${srcdir}/sanitizers-cmake"
+  git -c protocol.file.allow=always submodule update --init cmake/sanitizers-cmake
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS
+
+  cmake_default_flags=(
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_SKIP_RPATH=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS}"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
+
+  cmake -S $_pkgname -B build -G Ninja \
+    "${cmake_default_flags[@]}" \
+    -DOpenGL_GL_PREFERENCE=GLVND \
+    -DUSE_SYSTEM_LIBS=ON \
+    -DUSE_UPNP=ON \
+    -DUSE_MGBA=ON \
+    -DUSE_DISCORD_PRESENCE=ON \
+    -DUSE_RETRO_ACHIEVEMENTS=ON \
+    -DENCODE_FRAMEDUMPS=ON \
+    -DENABLE_X11=ON \
+    -DENABLE_EGL=ON \
+    -DENABLE_CLI_TOOL=ON \
+    -DENABLE_QT=ON \
+    -DENABLE_LTO=ON \
+    -DENABLE_ALSA=ON \
+    -DENABLE_PULSEAUDIO=ON \
+    -DENABLE_CUBEB=ON \
+    -DENABLE_LLVM=ON \
+    -DENABLE_VULKAN=ON \
+    -DENABLE_SDL=ON \
+    -DENABLE_HWDB=ON \
+    -DENABLE_EVDEV=ON \
+    -DENABLE_NOGUI=OFF \
+    -DENABLE_GENERIC=OFF \
+    -DENABLE_HEADLESS=OFF \
+    -DENABLE_TESTS=OFF \
+    -DENABLE_CCACHE=OFF \
+    -DENABLE_AUTOUPDATE=OFF \
+    -DENABLE_ANALYTICS=OFF \
+    -DUSE_SYSTEM_LIBMGBA=OFF \
+    -DUSE_SYSTEM_CUBEB=OFF \
+    -DUSE_SYSTEM_MBEDTLS=OFF
+  
+  cmake --build build
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+  install -Dm644 "${_pkgname}/COPYING" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING"
+}

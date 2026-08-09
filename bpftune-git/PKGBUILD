@@ -1,0 +1,89 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+_pkgname=bpftune
+pkgname=${_pkgname}-git
+pkgver=r764.4712347
+pkgrel=1
+pkgdesc='BPF/tracing tools for auto-tuning Linux'
+arch=(x86_64)
+url=https://github.com/oracle/bpftune
+license=('GPLv2 WITH Linux-syscall-note')
+depends=(
+  libbpf
+  libnl
+  libcap
+)
+makedepends=(
+  clang
+  bpf
+  git
+  lld
+  llvm
+  # pkgconf
+  python-docutils
+)
+provides=($_pkgname)
+conflicts=($_pkgname)
+# options=('strip')
+source=(
+  git+${url}.git
+  makefile-tweaks.patch
+)
+sha256sums=('SKIP'
+            '5599d329e9a57d756a40a9f51c7db6921745b3c63f76fc48ab18e51db77e6650')
+
+pkgver() {
+    cd "$_pkgname"
+
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+    cd $_pkgname
+
+    msg2 "Remove native march and use O3 flag"
+    patch -Np1 < ../makefile-tweaks.patch
+
+    sed -i 's/\/sbin/\/bin/g' src/Makefile
+    # sed -i 's/\/sbin/\/bin/g' src/bpftune.service
+
+    sed -i 's/rpmbuild --define/rpmbuild --with openrc --define/' Makefile
+
+    sed -i 's/"${command_args}"/${command_args}/' src/bpftune.initd
+
+    sed -i "/^CFLAGS =/ s/$/ ${CFLAGS}/" src/Makefile
+    sed -i "/^BPF_CFLAGS =/ s/$/ ${CFLAGS}/" src/Makefile
+    sed -i "/^CFLAGS =/ s/$/ ${CFLAGS}/" sample_tuner/Makefile 
+    sed -i "/^CFLAGS =/ s/$/ ${CFLAGS}/" test/strategy/Makefile
+}
+
+build() {
+  cd $_pkgname
+
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld -Wl,--undefined-version"
+  LD=ld.lld
+  AR=llvm-ar
+  NM=llvm-nm
+  STRIP=llvm-strip
+  OBJCOPY=llvm-objcopy
+  OBJDUMP=llvm-objdump
+  RANLIB=llvm-ranlib
+  READELF=llvm-readelf
+
+  export CC CXX LD AR NM STRIP OBJCOPY OBJDUMP RANLIB READELF LDFLAGS
+
+  make libdir=lib
+}
+
+package() {
+  cd $_pkgname
+
+  make install \
+    DESTDIR="${pkgdir}" \
+    libdir=lib
+  install -Dm644 LICENSE.txt \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE.txt"
+  rm -rf "${pkgdir}/var/lib/systemd"
+}

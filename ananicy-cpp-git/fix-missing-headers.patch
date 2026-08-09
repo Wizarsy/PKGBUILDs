@@ -1,0 +1,60 @@
+diff --color -ura a/src/platform/linux/backtrace.cpp b/src/platform/linux/backtrace.cpp
+--- a/src/platform/linux/backtrace.cpp	2026-08-09 00:48:33.263065823 -0300
++++ b/src/platform/linux/backtrace.cpp	2026-08-09 00:54:21.520763802 -0300
+@@ -9,6 +9,8 @@
+ 
+ #include <fmt/format.h>
+ 
++#include <cstdint>
++
+ static constexpr std::int32_t BACKTRACE_LENGTH = 20;
+ 
+ namespace backtrace_handler {
+diff --color -ura a/src/platform/linux/debug.cpp b/src/platform/linux/debug.cpp
+--- a/src/platform/linux/debug.cpp	2026-08-09 00:48:33.263148814 -0300
++++ b/src/platform/linux/debug.cpp	2026-08-09 00:53:57.492204459 -0300
+@@ -12,6 +12,8 @@
+ 
+ #include <spdlog/spdlog.h>
+ 
++#include <unistd.h>
++
+ namespace ananicy_debug {
+ void print_file(const std::string &path) {
+   const auto file_data = read_file(path);
+diff --color -ura a/src/platform/linux/process.cpp b/src/platform/linux/process.cpp
+--- a/src/platform/linux/process.cpp	2026-08-09 00:48:33.263148814 -0300
++++ b/src/platform/linux/process.cpp	2026-08-09 00:53:35.503692603 -0300
+@@ -20,6 +20,8 @@
+ 
+ #include <spdlog/spdlog.h>
+ 
++#include <unistd.h>
++
+ namespace fs = std::filesystem;
+ 
+ #if defined(USE_BPF_PROC_IMPL)
+diff --color -ura a/src/platform/linux/singleton_process.cpp b/src/platform/linux/singleton_process.cpp
+--- a/src/platform/linux/singleton_process.cpp	2026-08-09 00:48:33.263148814 -0300
++++ b/src/platform/linux/singleton_process.cpp	2026-08-09 00:54:41.599231195 -0300
+@@ -15,6 +15,8 @@
+ 
+ #include <spdlog/spdlog.h>
+ 
++#include <cstring>
++
+ using hash_t = std::uint64_t;
+ 
+ static constexpr auto SHARED_MEMORY_ADDR_SIZE = 1024;
+diff --color -ura a/src/utility/argument_parsing/argument.cpp b/src/utility/argument_parsing/argument.cpp
+--- a/src/utility/argument_parsing/argument.cpp	2026-08-09 00:48:33.264288371 -0300
++++ b/src/utility/argument_parsing/argument.cpp	2026-08-09 00:55:09.103871455 -0300
+@@ -10,6 +10,8 @@
+ 
+ #include <fmt/ranges.h>
+ 
++#include <cstring>
++
+ namespace argparse {
+ std::atomic<unsigned> argument::_id = 0;
+ 

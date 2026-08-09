@@ -1,7 +1,7 @@
 # Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
 _pkgname=rpcs3
-pkgname=$_pkgname-git
+pkgname=${_pkgname}-git
 pkgver=0.0.42.r19689.daa43790
 pkgrel=1
 pkgdesc='A Sony PlayStation 3 emulator'
@@ -9,35 +9,36 @@ arch=(x86_64)
 url=https://github.com/RPCS3/rpcs3
 license=(GPL-2.0-only)
 depends=(
+  # cubeb
+  # curl
+  # faudio
+  ffmpeg
+  glew
+  glslang
+  hicolor-icon-theme
+  # hidapi
+  libevdev
+  # libpng
+  libudev.so
+  # libusb
+  libgl
+  llvm
+  miniupnpc
+  openal
+  opencv
+  pugixml
+  # protobuf
   qt6-base
   qt6-declarative
   qt6-multimedia
   qt6-svg
-  glew
-  openal
-  sdl3
-  vulkan-icd-loader
-  libgl
-  zlib
-  curl
-  pugixml
-  llvm
-  opencv
-  ffmpeg
-  libevdev
-  libudev.so
-  zstd
-  glslang
-  miniupnpc
-  hidapi
-  libpng
-  libusb
-  protobuf
   rtmidi
-  # wolfssl
-  # faudio
+  sdl3
+  # vulkan-icd-loader
   # vulkan-memory-allocator
-  # cubeb
+  # wolfssl
+  # zlib
+  # zstd
 )
 optdepends=(
   rpcs3-udev
@@ -50,31 +51,32 @@ makedepends=(
   git
   libglvnd
   lld
+  pkgconf
   python
   vulkan-headers
 )
-provides=(rpcs3)
-# conflicts=(rpcs3)
+provides=($_pkgname)
+conflicts=($_pkgname)
 options=(
   !emptydirs
   !lto
   !strip
 )
 source=(
-  git+https://github.com/RPCS3/rpcs3.git
+  git+${url}.git
+  git+https://github.com/RPCS3/soundtouch.git
+  git+https://github.com/RPCS3/yaml-cpp.git
   git+https://github.com/ip7z/7zip.git
   git+https://github.com/FNA-XNA/FAudio.git
   git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-  git+https://github.com/RPCS3/soundtouch.git
   git+https://github.com/asmjit/asmjit.git
-  git+https://github.com/mozilla/cubeb.git
   git+https://github.com/Vestrel/discord-rpc
-  git+https://github.com/FeralInteractive/gamemode.git
-  git+https://github.com/xioTechnologies/Fusion.git
   git+https://github.com/nothings/stb.git
   git+https://github.com/wolfSSL/wolfssl.git
-  git+https://github.com/RPCS3/yaml-cpp.git
+  git+https://github.com/mozilla/cubeb.git
   git+https://github.com/arsenm/sanitizers-cmake.git
+  feralinteractive::git+https://github.com/FeralInteractive/gamemode.git
+  fusion::git+https://github.com/xioTechnologies/Fusion.git
 )
 sha256sums=('SKIP'
             'SKIP'
@@ -94,72 +96,47 @@ sha256sums=('SKIP'
 pkgver() {
   cd $_pkgname
 
-  COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' rpcs3/rpcs3_version.cpp)
-  COMM_COUNT="$(git rev-list --count HEAD)"
-  COMM_HASH="$(git rev-parse --short=8 HEAD)"
-  echo "${COMM_TAG}.r${COMM_COUNT}.${COMM_HASH}"
+  printf "%s.r%s.%s" "$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' rpcs3/rpcs3_version.cpp)" "$(git rev-list --count HEAD)" "$(git rev-parse --short=8 HEAD)"
 }
 
 prepare() {
   cd $_pkgname
 
-  submodules=(3rdparty/{cubeb/cubeb,yaml-cpp,FAudio,wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator})
+  submodules=(3rdparty/{cubeb/cubeb,yaml-cpp/yaml-cpp,FAudio,wolfssl/wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator,fusion/fusion,feralinteractive/feralinteractive,asmjit/asmjit})
   for submodule in ${submodules[@]}; do
-    git submodule init ${submodule}
-    git config submodule.${submodule}.url "${srcdir}/${submodule##*/}"
-    git -c protocol.file.allow=always submodule update ${submodule}
+    git submodule set-url ${submodule} "${srcdir}/${submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init ${submodule}
   done
 
-  git submodule init 3rdparty/asmjit/asmjit
-  git config submodule.asmjit.url "${srcdir}/asmjit"
-  git -c protocol.file.allow=always submodule update 3rdparty/asmjit/asmjit
-
-  git submodule init 3rdparty/feralinteractive/feralinteractive
-  git config submodule.3rdparty/feralinteractive/feralinteractive.url "${srcdir}/gamemode"
-  git -c protocol.file.allow=always submodule update 3rdparty/feralinteractive/feralinteractive
-
-  git submodule init 3rdparty/fusion/fusion
-  git config submodule.3rdparty/fusion/fusion.url "${srcdir}/Fusion"
-  git -c protocol.file.allow=always submodule update 3rdparty/fusion/fusion
-
   cd 3rdparty/cubeb/cubeb
-  git submodule init cmake/sanitizers-cmake
-  git config submodule.cmake/sanitizers-cmake.url "${srcdir}/sanitizers-cmake"
-  git -c protocol.file.allow=always submodule update cmake/sanitizers-cmake
+  git submodule set-url cmake/sanitizers-cmake "${srcdir}/sanitizers-cmake"
+  git -c protocol.file.allow=always submodule update --init cmake/sanitizers-cmake
 }
 
 build() {
   CC=clang
   CXX=clang++
-  LD=ld.lld
-  AR=llvm-ar
-  NM=llvm-nm
-  STRIP=llvm-strip
-  OBJCOPY=llvm-objcopy
-  OBJDUMP=llvm-objdump
-  RANLIB=llvm-ranlib
-  READELF=llvm-readelf
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
 
-  export CC CXX LD AR NM STRIP OBJCOPY OBJDUMP RANLIB READELF
+  export CC CXX LDFLAGS
 
-  LINKER="${LDFLAGS} -fuse-ld=lld"
+  cmake_default_flags=(
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_SKIP_RPATH=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS}"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
 
   cmake -S $_pkgname -B build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_SKIP_RPATH=ON \
-    -DCMAKE_C_FLAGS="${CFLAGS}" \
-    -DCMAKE_CXX_FLAGS="${CFLAGS}" \
-    -DCMAKE_EXE_LINKER_FLAGS="${LINKER}" \
-    -DCMAKE_MODULE_LINKER_FLAGS="${LINKER}" \
-    -DCMAKE_SHARED_LINKER_FLAGS="${LINKER}" \
-    -DCMAKE_AR="/usr/bin/${AR}" \
-    -DCMAKE_RANLIB="/usr/bin/${RANLIB}" \
+    "${cmake_default_flags[@]}" \
     -DOpenGL_GL_PREFERENCE=GLVND \
-    -DUSE_PRECOMPILED_HEADERS=OFF  \
-    -DUSE_NATIVE_INSTRUCTIONS=OFF \
-    -DBUILD_LLVM=OFF \
-    -DSTATIC_LINK_LLVM=OFF \
     -DWITH_LLVM=ON \
     -DUSE_LTO=ON \
     -DUSE_DISCORD_RPC=ON \
@@ -182,10 +159,13 @@ build() {
     -DUSE_SYSTEM_SDL=ON \
     -DUSE_SYSTEM_ZLIB=ON \
     -DUSE_SYSTEM_ZSTD=ON \
+    -DSTATIC_LINK_LLVM=OFF \
+    -DUSE_NATIVE_INSTRUCTIONS=OFF \
     -DUSE_SYSTEM_WOLFSSL=OFF \
     -DUSE_SYSTEM_VULKAN_MEMORY_ALLOCATOR=OFF \
     -DUSE_SYSTEM_FAUDIO=OFF \
     -DUSE_SYSTEM_CUBEB=OFF \
+    -DBUILD_LLVM=OFF \
     -DBUILD_RPCS3_TESTS=OFF \
     -DRUN_RPCS3_TESTS=OFF
   

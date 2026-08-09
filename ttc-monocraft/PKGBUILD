@@ -1,24 +1,24 @@
 # Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
-pkgbase='ttc-monocraft'
+pkgbase=ttc-monocraft
 pkgname=(
-  'ttc-monocraft-nerd-fonts-patched'
-  'ttc-monocraft-no-ligatures'
-  'ttc-monocraft'
+  ttc-monocraft-nerd-fonts-patched
+  ttc-monocraft-no-ligatures
+  ttc-monocraft
 )
 pkgver=4.2.1
 pkgrel=1
 pkgdesc='A monospaced programming font inspired by the Minecraft typeface'
-arch=('any')
-url='https://github.com/IdreesInc/Monocraft'
-license=('OFL-1.1')
-provides=('ttc-monocraft')
-conflicts=('ttc-monocraft')
+arch=(any)
+url=https://github.com/IdreesInc/Monocraft
+license=(OFL-1.1)
+provides=($pkgbase)
+conflicts=($pkgbase)
 source=(
-  "Monocraft-nerd-fonts-patched-$pkgver.ttc::https://github.com/IdreesInc/Monocraft/releases/download/v$pkgver/Monocraft-nerd-fonts-patched.ttc"
-  "Monocraft-no-ligatures-$pkgver.ttc::https://github.com/IdreesInc/Monocraft/releases/download/v$pkgver/Monocraft-no-ligatures.ttc"
-  "Monocraft-$pkgver.ttc::https://github.com/IdreesInc/Monocraft/releases/download/v$pkgver/Monocraft.ttc"
-  "Monocraft-$pkgver-LICENSE::https://raw.githubusercontent.com/IdreesInc/Monocraft/refs/heads/main/LICENSE"
+  Monocraft-nerd-fonts-patched-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft-nerd-fonts-patched.ttc
+  Monocraft-no-ligatures-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft-no-ligatures.ttc
+  Monocraft-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft.ttc
+  Monocraft-${pkgver}-LICENSE::https://raw.githubusercontent.com/IdreesInc/Monocraft/refs/heads/main/LICENSE
 )
 sha256sums=('67f88ff9e7c6560f6cf60fb062fd353a72f62dc2654462950c65b63ed53d9754'
             '93ee79ba62b7d0a653dfd90d5c519f949e3ad64ec483046b417f2cc6943831d0'
@@ -28,27 +28,27 @@ sha256sums=('67f88ff9e7c6560f6cf60fb062fd353a72f62dc2654462950c65b63ed53d9754'
 package_ttc-monocraft-nerd-fonts-patched() {
   pkgdesc+=' (nerd fonts patched)'
 
-  install -Dm644 Monocraft-$pkgver-LICENSE \
-    "$pkgdir"/usr/share/licenses/$pkgbase/LICENSE
+  install -Dm644 "Monocraft-${pkgver}-LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgbase}/LICENSE"
 
-  install -Dm644 Monocraft-nerd-fonts-patched-$pkgver.ttc \
-    "$pkgdir"/usr/share/fonts/TTC/Monocraft.ttc
+  install -Dm644 "Monocraft-nerd-fonts-patched-${pkgver}.ttc" \
+    "${pkgdir}/usr/share/fonts/TTC/Monocraft.ttc"
 }
 
 package_ttc-monocraft-no-ligatures() {
   pkgdesc+=' (no ligatures)'
 
-  install -Dm644 Monocraft-$pkgver-LICENSE \
-    "$pkgdir"/usr/share/licenses/$pkgbase/LICENSE
+  install -Dm644 "Monocraft-${pkgver}-LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgbase}/LICENSE"
 
-  install -Dm644 Monocraft-no-ligatures-$pkgver.ttc \
-    "$pkgdir"/usr/share/fonts/TTC/Monocraft.ttc
+  install -Dm644 "Monocraft-no-ligatures-${pkgver}.ttc "\
+    "${pkgdir}/usr/share/fonts/TTC/Monocraft.ttc"
 }
 
 package_ttc-monocraft() {
   install -Dm644 Monocraft-$pkgver-LICENSE \
-    "$pkgdir"/usr/share/licenses/$pkgbase/LICENSE
+    "${pkgdir}/usr/share/licenses/${pkgbase}/LICENSE"
 
-  install -Dm644 Monocraft-$pkgver.ttc \
-    "$pkgdir"/usr/share/fonts/TTC/Monocraft.ttc
+  install -Dm644 "Monocraft-${pkgver}.ttc" \
+    "${pkgdir}/usr/share/fonts/TTC/Monocraft.ttc"
 }
