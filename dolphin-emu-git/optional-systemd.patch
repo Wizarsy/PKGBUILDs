@@ -1,0 +1,32 @@
+diff --color -ura a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt	2026-08-09 22:46:24.187699377 -0300
++++ b/CMakeLists.txt	2026-08-09 23:00:49.083650303 -0300
+@@ -119,6 +119,7 @@
+ option(ENABLE_AUTOUPDATE "Enables support for automatic updates" ON)
+ option(USE_RETRO_ACHIEVEMENTS "Enables integration with retroachievements.org" ON)
+ option(ENABLE_CCACHE "Enables CCache compiler cache" OFF)
++option(ENABLE_SYSTEMD "Enables libsystemd support" OFF)
+ 
+ # Maintainers: if you consider blanket disabling this for your users, please
+ # consider the following points:
+@@ -730,12 +731,14 @@
+   dolphin_find_optional_system_library(LIBMGBA Externals/mGBA 0.11)
+ endif()
+ 
+-find_package(SYSTEMD)
+-if(SYSTEMD_FOUND)
+-  message(STATUS "libsystemd found, enabling traversal server watchdog support")
+-  add_definitions(-DHAVE_LIBSYSTEMD)
+-else()
+-  message(STATUS "libsystemd not found, disabling traversal server watchdog support")
++if(ENABLE_SYSTEMD)
++  find_package(SYSTEMD)
++  if(SYSTEMD_FOUND)
++    message(STATUS "libsystemd found, enabling traversal server watchdog support")
++    add_definitions(-DHAVE_LIBSYSTEMD)
++  else()
++    message(STATUS "libsystemd not found, disabling traversal server watchdog support")
++  endif()
+ endif()
+ 
+ if (WIN32)

@@ -61,8 +61,8 @@ options=(
 provides=($_pkgname)
 conflicts=($_pkgname)
 source=(
-  # ${pkgname}::git+${url}.git#tag=${pkgver}
   ${_pkgname}::git+${url}.git
+  optional-systemd.patch
   git+https://github.com/mgba-emu/mgba.git
   git+https://github.com/mozilla/cubeb.git
   git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
@@ -76,6 +76,7 @@ source=(
   git+https://github.com/arsenm/sanitizers-cmake.git
 )
 sha256sums=('SKIP'
+            'a67e10c2c3bafa5d078d7cc2ee2c0311c073496aaf181149fe9139b36b4f12b1'
             'SKIP'
             'SKIP'
             'SKIP'
@@ -96,6 +97,8 @@ pkgver() {
 
 prepare() {
   cd $_pkgname
+
+  patch -p1 < ../optional-systemd.patch
 
   submodules=(Externals/{cubeb/cubeb,mGBA/mgba,cpp-ipc/cpp-ipc,cpp-optparse/cpp-optparse,imgui/imgui,implot/implot,tinygltf/tinygltf,rcheevos/rcheevos,watcher/watcher,VulkanMemoryAllocator})
   for submodule in ${submodules[@]}; do
@@ -157,6 +160,7 @@ build() {
     -DENABLE_CCACHE=OFF \
     -DENABLE_AUTOUPDATE=OFF \
     -DENABLE_ANALYTICS=OFF \
+    -DENABLE_SYSTEMD=OFF \
     -DUSE_SYSTEM_LIBMGBA=OFF \
     -DUSE_SYSTEM_CUBEB=OFF \
     -DUSE_SYSTEM_MBEDTLS=OFF
