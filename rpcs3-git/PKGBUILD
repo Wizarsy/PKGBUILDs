@@ -2,7 +2,7 @@
 
 _pkgname=rpcs3
 pkgname=${_pkgname}-git
-pkgver=0.0.42.r19689.daa43790
+pkgver=0.0.42.r19873.98906eb0
 pkgrel=1
 pkgdesc='A Sony PlayStation 3 emulator'
 arch=(x86_64)
@@ -46,6 +46,7 @@ optdepends=(
 )
 makedepends=(
   clang
+  doxygen
   cmake
   ninja
   git
@@ -75,10 +76,12 @@ source=(
   git+https://github.com/wolfSSL/wolfssl.git
   git+https://github.com/mozilla/cubeb.git
   git+https://github.com/arsenm/sanitizers-cmake.git
+  git+https://github.com/protocolbuffers/protobuf.git
   feralinteractive::git+https://github.com/FeralInteractive/gamemode.git
   fusion::git+https://github.com/xioTechnologies/Fusion.git
 )
 sha256sums=('SKIP'
+            'SKIP'
             'SKIP'
             'SKIP'
             'SKIP'
@@ -102,7 +105,7 @@ pkgver() {
 prepare() {
   cd $_pkgname
 
-  submodules=(3rdparty/{cubeb/cubeb,yaml-cpp/yaml-cpp,FAudio,wolfssl/wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator,fusion/fusion,feralinteractive/feralinteractive,asmjit/asmjit})
+  submodules=(3rdparty/{cubeb/cubeb,yaml-cpp/yaml-cpp,FAudio,wolfssl/wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator,fusion/fusion,feralinteractive/feralinteractive,asmjit/asmjit,protobuf/protobuf})
   for submodule in ${submodules[@]}; do
     git submodule set-url ${submodule} "${srcdir}/${submodule##*/}"
     git -c protocol.file.allow=always submodule update --init ${submodule}
@@ -146,7 +149,7 @@ build() {
     -DUSE_VULKAN=ON \
     -DUSE_SYSTEM_CURL=ON \
     -DUSE_SYSTEM_FFMPEG=ON \
-    -DUSE_SYSTEM_PROTOBUF=ON \
+    -DUSE_SYSTEM_PROTOBUF=OFF \
     -DUSE_SYSTEM_GLSLANG=ON \
     -DUSE_SYSTEM_HIDAPI=ON \
     -DUSE_SYSTEM_LIBPNG=ON \

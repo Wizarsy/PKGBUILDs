@@ -41,7 +41,7 @@ package_ttc-monocraft-no-ligatures() {
   install -Dm644 "Monocraft-${pkgver}-LICENSE" \
     "${pkgdir}/usr/share/licenses/${pkgbase}/LICENSE"
 
-  install -Dm644 "Monocraft-no-ligatures-${pkgver}.ttc "\
+  install -Dm644 "Monocraft-no-ligatures-${pkgver}.ttc"\
     "${pkgdir}/usr/share/fonts/TTC/Monocraft.ttc"
 }
 

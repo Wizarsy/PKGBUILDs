@@ -2,7 +2,7 @@
 
 _pkgname=pcsx2
 pkgname=${_pkgname}-git
-pkgver=2.7.518.r0.gd88510e
+pkgver=2.7.525.r0.gc10a5c9
 pkgrel=1
 pkgdesc='A Sony PlayStation 2 emulator'
 arch=(x86_64)

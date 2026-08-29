@@ -2,7 +2,7 @@
 
 _pkgname=dolphin-emu
 pkgname=${_pkgname}-git
-pkgver=2606.r292.gcd3ea81
+pkgver=2606.r328.g4f8af23
 pkgrel=1
 pkgdesc='A Nintendo Wii and GameCube emulator'
 arch=(x86_64)

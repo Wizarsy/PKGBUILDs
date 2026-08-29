@@ -2,7 +2,7 @@
 
 _pkgname=ananicy-cpp
 pkgname=${_pkgname}-git
-pkgver=1.2.0.r1.ga42a187
+pkgver=1.2.0.r3.g3554447
 pkgrel=1
 pkgdesc='Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage'
 arch=(x86_64)
