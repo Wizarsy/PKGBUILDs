@@ -1,8 +1,13 @@
 # Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
 _pkgname=pcsx2
 pkgname=${_pkgname}-git
-pkgver=2.7.525.r0.gc10a5c9
+pkgver=2.9.79.r1.g6bf754d
 pkgrel=1
 pkgdesc='A Sony PlayStation 2 emulator'
 arch=(x86_64)
@@ -46,17 +51,18 @@ makedepends=(
   qt6-tools
   vulkan-headers
 )
-provides=($_pkgname)
-conflicts=($_pkgname)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
 options=(
   !emptydirs
   !lto
 )
 source=(
-  git+${url}.git
+  "git+${url}.git"
   qt-plugins.patch
-  git+https://github.com/sammycage/plutovg.git#tag=v1.3.2
-  git+https://github.com/sammycage/plutosvg.git#tag=v0.0.7
+  fix-missing-headers.patch
+  git+https://github.com/sammycage/plutovg.git#tag=v1.3.3
+  git+https://github.com/sammycage/plutosvg.git#tag=v0.0.8
   git+https://github.com/jurplel/QtApng.git#tag=1.3.0
   git+https://github.com/pnggroup/libpng.git#tag=v1.6.58
   https://download.sourceforge.net/libpng-apng/libpng-1.6.58-apng.patch.gz
@@ -68,8 +74,9 @@ source=(
 )
 sha256sums=('SKIP'
             'a4c5380ad6cf9a563dd809ab74d2f24b4d8c7eb5adef53a718d0536a959c2ffb'
-            '72952e7aab0ead0e2d667674699f63435f69421fac3fbe1ff4280900f73f093e'
-            'ef0d243dd1ba49503df3e6fd72799b388ed6e4ffde63659e94036d6ec616e93c'
+            '875717cd9703d6284681857b962f95f8bed0ccfa849e1c693fcc6bb48d13d1a8'
+            '03b09bab72cea11e56814b0821e7e046934d72ee224c10c91653fde8fb4aae31'
+            '9a9fda98d8f6b462f744711584264cd463ac9cee8fd7a01f08e5e954f5452ef2'
             'b69518cbf08a62496d992a76bb80c5f7b419fc0f3895880ff40bdeaef9e83218'
             '07900c2e616ce58dda6b30ec444bbe662b51c0bdd0bc7e02ba053ec83f009df5'
             'eee7dea22ed502868017971c86c63c4ed1e6085de0baebfdcc3d3322f00f3eb0'
@@ -80,15 +87,16 @@ sha256sums=('SKIP'
             'SKIP')
 
 pkgver() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   patch -p1 < ../qt-plugins.patch
+  patch -p1 < ../fix-missing-headers.patch
 
   cd "${srcdir}/libpng"
   patch -p1 < "${srcdir}/libpng-1.6.58-apng.patch"
@@ -102,8 +110,8 @@ prepare() {
 
   cd ext/c4core
   for submodule in cmake src/c4/ext/{debugbreak,fast_float}; do
-    git submodule set-url ${submodule} "${srcdir}/${submodule##*/}"
-    git -c protocol.file.allow=always submodule update --init ${submodule}
+    git submodule set-url "${submodule}" "${srcdir}/${submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${submodule}"
   done
 }
 
@@ -116,7 +124,7 @@ build() {
 
   external_deps="${srcdir}/deps"
 
-  cmake_default_flags=(
+  local cmake_default_flags=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_BUILD_TYPE=Release
@@ -177,9 +185,9 @@ build() {
   cmake --build build
   cmake --install build
 
-  cd "${srcdir}"
+  cd "$srcdir"
 
-  cmake -S $_pkgname -B build -G Ninja \
+  cmake -S "$_pkgname" -B build -G Ninja \
     "${cmake_default_flags[@]}" \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DOpenGL_GL_PREFERENCE=GLVND \
@@ -196,7 +204,7 @@ build() {
 }
 
 package() {
-  DESTDIR="${pkgdir}" cmake --install build
+  DESTDIR="$pkgdir" cmake --install build
   install -Dm644 "${srcdir}/${_pkgname}/.github/workflows/scripts/linux/pcsx2-qt.desktop" "${pkgdir}/usr/share/applications/net.pcsx2.PCSX2.desktop"
   install -Dm644 "${pkgdir}/usr/share/PCSX2/resources/icons/AppIconLarge.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/PCSX2.png"
   
@@ -209,7 +217,7 @@ package() {
   done
 
   install -Dm755 -d "${pkgdir}/usr/lib/${_pkgname^^}/plugins/imageformats"
-  install -Dm644 ${srcdir}/deps/plugins/imageformats/* "${pkgdir}/usr/lib/${_pkgname^^}/plugins/imageformats"
+  install -Dm644 "${srcdir}/deps/plugins/imageformats/"* "${pkgdir}/usr/lib/${_pkgname^^}/plugins/imageformats"
 
   install -Dm644 "${srcdir}/${_pkgname}/COPYING.GPLv3" \
     "${pkgdir}/usr/share/licenses/${pkgname}/COPYING.GPLv3"

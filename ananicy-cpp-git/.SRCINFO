@@ -1,6 +1,6 @@
 pkgbase = ananicy-cpp-git
 	pkgdesc = Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage
-	pkgver = 1.2.0.r1.ga42a187
+	pkgver = 1.2.0.r3.g3554447
 	pkgrel = 1
 	url = https://gitlab.com/ananicy-cpp/ananicy-cpp
 	arch = x86_64

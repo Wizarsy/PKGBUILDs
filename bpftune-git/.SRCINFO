@@ -1,6 +1,6 @@
 pkgbase = bpftune-git
 	pkgdesc = BPF/tracing tools for auto-tuning Linux
-	pkgver = r764.4712347
+	pkgver = r772.d5d9f60
 	pkgrel = 1
 	url = https://github.com/oracle/bpftune
 	arch = x86_64
@@ -10,6 +10,7 @@ pkgbase = bpftune-git
 	makedepends = git
 	makedepends = lld
 	makedepends = llvm
+	makedepends = pkgconf
 	makedepends = python-docutils
 	depends = libbpf
 	depends = libnl
@@ -17,8 +18,8 @@ pkgbase = bpftune-git
 	provides = bpftune
 	conflicts = bpftune
 	source = git+https://github.com/oracle/bpftune.git
-	source = makefile-tweaks.patch
+	source = build-tweaks.patch
 	sha256sums = SKIP
-	sha256sums = 5599d329e9a57d756a40a9f51c7db6921745b3c63f76fc48ab18e51db77e6650
+	sha256sums = 806a3f909cb344ec5794419ae5ff8d47db2be24be7275d0c18651e46e2809d33
 
 pkgname = bpftune-git

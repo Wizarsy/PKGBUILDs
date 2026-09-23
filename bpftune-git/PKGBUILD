@@ -1,5 +1,10 @@
 # Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
 _pkgname=bpftune
 pkgname=${_pkgname}-git
 pkgver=r772.d5d9f60
@@ -19,18 +24,18 @@ makedepends=(
   git
   lld
   llvm
-  # pkgconf
+  pkgconf
   python-docutils
 )
-provides=($_pkgname)
-conflicts=($_pkgname)
-# options=('strip')
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+# options=()
 source=(
-  git+${url}.git
-  makefile-tweaks.patch
+  "git+${url}.git"
+  build-tweaks.patch
 )
 sha256sums=('SKIP'
-            '5599d329e9a57d756a40a9f51c7db6921745b3c63f76fc48ab18e51db77e6650')
+            '806a3f909cb344ec5794419ae5ff8d47db2be24be7275d0c18651e46e2809d33')
 
 pkgver() {
     cd "$_pkgname"
@@ -39,49 +44,28 @@ pkgver() {
 }
 
 prepare() {
-    cd $_pkgname
+    cd "$_pkgname"
 
-    msg2 "Remove native march and use O3 flag"
-    patch -Np1 < ../makefile-tweaks.patch
-
-    sed -i 's/\/sbin/\/bin/g' src/Makefile
-    # sed -i 's/\/sbin/\/bin/g' src/bpftune.service
-
-    sed -i 's/rpmbuild --define/rpmbuild --with openrc --define/' Makefile
-
-    sed -i 's/"${command_args}"/${command_args}/' src/bpftune.initd
-
-    sed -i "/^CFLAGS =/ s/$/ ${CFLAGS}/" src/Makefile
-    sed -i "/^BPF_CFLAGS =/ s/$/ ${CFLAGS}/" src/Makefile
-    sed -i "/^CFLAGS =/ s/$/ ${CFLAGS}/" sample_tuner/Makefile 
-    sed -i "/^CFLAGS =/ s/$/ ${CFLAGS}/" test/strategy/Makefile
+    patch -p1 < ../build-tweaks.patch
 }
 
 build() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   CC=clang
-  CXX=clang++
   LDFLAGS="${LDFLAGS} -fuse-ld=lld -Wl,--undefined-version"
-  LD=ld.lld
-  AR=llvm-ar
-  NM=llvm-nm
-  STRIP=llvm-strip
-  OBJCOPY=llvm-objcopy
-  OBJDUMP=llvm-objdump
-  RANLIB=llvm-ranlib
-  READELF=llvm-readelf
+  CFLAGS="${CFLAGS} -w"
 
-  export CC CXX LD AR NM STRIP OBJCOPY OBJDUMP RANLIB READELF LDFLAGS
+  export CC CFLAGS LDFLAGS
 
   make libdir=lib
 }
 
 package() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   make install \
-    DESTDIR="${pkgdir}" \
+    DESTDIR="$pkgdir" \
     libdir=lib
   install -Dm644 LICENSE.txt \
     "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE.txt"

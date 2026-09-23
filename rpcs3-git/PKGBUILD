@@ -1,8 +1,13 @@
 # Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
 _pkgname=rpcs3
 pkgname=${_pkgname}-git
-pkgver=0.0.42.r19873.98906eb0
+pkgver=0.0.42.r20034.3fa2bf66
 pkgrel=1
 pkgdesc='A Sony PlayStation 3 emulator'
 arch=(x86_64)
@@ -27,7 +32,7 @@ depends=(
   openal
   opencv
   pugixml
-  # protobuf
+  protobuf
   qt6-base
   qt6-declarative
   qt6-multimedia
@@ -56,15 +61,15 @@ makedepends=(
   python
   vulkan-headers
 )
-provides=($_pkgname)
-conflicts=($_pkgname)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
 options=(
   !emptydirs
   !lto
   !strip
 )
 source=(
-  git+${url}.git
+  "git+${url}.git"
   git+https://github.com/RPCS3/soundtouch.git
   git+https://github.com/RPCS3/yaml-cpp.git
   git+https://github.com/ip7z/7zip.git
@@ -97,18 +102,18 @@ sha256sums=('SKIP'
             'SKIP')
 
 pkgver() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   printf "%s.r%s.%s" "$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' rpcs3/rpcs3_version.cpp)" "$(git rev-list --count HEAD)" "$(git rev-parse --short=8 HEAD)"
 }
 
 prepare() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   submodules=(3rdparty/{cubeb/cubeb,yaml-cpp/yaml-cpp,FAudio,wolfssl/wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator,fusion/fusion,feralinteractive/feralinteractive,asmjit/asmjit,protobuf/protobuf})
-  for submodule in ${submodules[@]}; do
-    git submodule set-url ${submodule} "${srcdir}/${submodule##*/}"
-    git -c protocol.file.allow=always submodule update --init ${submodule}
+  for submodule in "${submodules[@]}"; do
+    git submodule set-url "${submodule}" "${srcdir}/${submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${submodule}"
   done
 
   cd 3rdparty/cubeb/cubeb
@@ -123,7 +128,7 @@ build() {
 
   export CC CXX LDFLAGS
 
-  cmake_default_flags=(
+  local cmake_default_flags=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_SKIP_RPATH=ON
     -DCMAKE_BUILD_TYPE=Release
@@ -137,7 +142,7 @@ build() {
     -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
   )
 
-  cmake -S $_pkgname -B build -G Ninja \
+  cmake -S "$_pkgname" -B build -G Ninja \
     "${cmake_default_flags[@]}" \
     -DOpenGL_GL_PREFERENCE=GLVND \
     -DWITH_LLVM=ON \
@@ -149,7 +154,7 @@ build() {
     -DUSE_VULKAN=ON \
     -DUSE_SYSTEM_CURL=ON \
     -DUSE_SYSTEM_FFMPEG=ON \
-    -DUSE_SYSTEM_PROTOBUF=OFF \
+    -DUSE_SYSTEM_PROTOBUF=ON \
     -DUSE_SYSTEM_GLSLANG=ON \
     -DUSE_SYSTEM_HIDAPI=ON \
     -DUSE_SYSTEM_LIBPNG=ON \
@@ -176,7 +181,7 @@ build() {
 }
 
 package() {
-  DESTDIR="${pkgdir}" cmake --install build
+  DESTDIR="$pkgdir" cmake --install build
   install -Dm644 "${_pkgname}/LICENSE" \
     "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }

@@ -1,5 +1,10 @@
 # Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
 _pkgname=ananicy-cpp
 pkgname=${_pkgname}-git
 pkgver=1.2.0.r3.g3554447
@@ -30,23 +35,23 @@ makedepends=(
   nlohmann-json
 )
 options=(!lto)
-provides=($_pkgname)
-conflicts=($_pkgname)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
 source=(
-  git+${url}.git
+  "git+${url}.git"
   fix-missing-headers.patch
 )
 sha256sums=('SKIP'
             '11c0ae8c1c544275cf17063676ab4523cfb9e7b39ee1e71eef9d613eeb807ea8')
 
 pkgver() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   patch -p1 < ../fix-missing-headers.patch
 }
@@ -73,7 +78,7 @@ build() {
     -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
   )
 
-  cmake -S $_pkgname -B build -G Ninja \
+  cmake -S "$_pkgname" -B build -G Ninja \
     "${cmake_default_flags[@]}" \
     -DVERSION=${pkgver} \
     -DUSE_EXTERNAL_SPDLOG=ON \
@@ -84,11 +89,11 @@ build() {
     -DBPF_BUILD_LIBBPF=OFF \
     -DENABLE_SYSTEMD=OFF
 
-  cmake --build build --target $_pkgname
+  cmake --build build --target "$_pkgname"
 }
 
 package() {
-  DESTDIR="${pkgdir}" cmake --install build --component Runtime
+  DESTDIR="$pkgdir" cmake --install build --component Runtime
   install -m755 -d "${pkgdir}/etc/ananicy.d"
   install -Dm644 "${_pkgname}/LICENSE" \
     "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"

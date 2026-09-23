@@ -1,8 +1,13 @@
 # Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
 _pkgname=dolphin-emu
 pkgname=${_pkgname}-git
-pkgver=2606.r328.g4f8af23
+pkgver=2606.r388.g233b2df
 pkgrel=1
 pkgdesc='A Nintendo Wii and GameCube emulator'
 arch=(x86_64)
@@ -58,10 +63,10 @@ options=(
   !emptydirs
   !lto
 )
-provides=($_pkgname)
-conflicts=($_pkgname)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
 source=(
-  ${_pkgname}::git+${url}.git
+  "${_pkgname}::git+${url}.git"
   optional-systemd.patch
   git+https://github.com/mgba-emu/mgba.git
   git+https://github.com/mozilla/cubeb.git
@@ -90,20 +95,20 @@ sha256sums=('SKIP'
             'SKIP')
 
 pkgver() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   git describe --long --tags --abbrev=7 | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {
-  cd $_pkgname
+  cd "$_pkgname"
 
   patch -p1 < ../optional-systemd.patch
 
   submodules=(Externals/{cubeb/cubeb,mGBA/mgba,cpp-ipc/cpp-ipc,cpp-optparse/cpp-optparse,imgui/imgui,implot/implot,tinygltf/tinygltf,rcheevos/rcheevos,watcher/watcher,VulkanMemoryAllocator})
-  for submodule in ${submodules[@]}; do
-    git submodule set-url ${submodule} "${srcdir}/${submodule##*/}"
-    git -c protocol.file.allow=always submodule update --init ${submodule}
+  for submodule in "${submodules[@]}"; do
+    git submodule set-url "${submodule}" "${srcdir}/${submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${submodule}"
   done
   cd Externals/cubeb/cubeb
   git submodule set-url cmake/sanitizers-cmake "${srcdir}/sanitizers-cmake"
@@ -117,8 +122,9 @@ build() {
 
   export CC CXX LDFLAGS
 
-  cmake_default_flags=(
+  local cmake_default_flags=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_SKIP_RPATH=ON
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_PREFIX=/usr
@@ -131,7 +137,7 @@ build() {
     -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
   )
 
-  cmake -S $_pkgname -B build -G Ninja \
+  cmake -S "$_pkgname" -B build -G Ninja \
     "${cmake_default_flags[@]}" \
     -DOpenGL_GL_PREFERENCE=GLVND \
     -DUSE_SYSTEM_LIBS=ON \
@@ -169,7 +175,7 @@ build() {
 }
 
 package() {
-  DESTDIR="${pkgdir}" cmake --install build
+  DESTDIR="$pkgdir" cmake --install build
   install -Dm644 "${_pkgname}/COPYING" \
     "${pkgdir}/usr/share/licenses/${pkgname}/COPYING"
 }

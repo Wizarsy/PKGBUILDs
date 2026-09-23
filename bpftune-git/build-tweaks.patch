@@ -1,0 +1,179 @@
+diff --color -ura a/Makefile b/Makefile
+--- a/Makefile	2026-09-23 01:24:19.586993111 -0300
++++ b/Makefile	2026-09-23 02:34:32.426502243 -0300
+@@ -52,7 +52,7 @@
+ 	git archive --format=tar --prefix=$(PKG_ARCHIVE)/ -o $(SRC_DIR)/$(PKG_ARCHIVE).tar HEAD;\
+ 	bzip2 $(SRC_DIR)/$(PKG_ARCHIVE).tar ; \
+ 	cp -pr LICENSE* $(LICENSEDIR) ;\
+-	DESTDIR=$(BUILD_DIR) installprefix=$(BUILD_DIR)/$(prefix) rpmbuild --define "_topdir $(PKG_DIR)" -ba buildrpm/bpftune.spec
++	DESTDIR=$(BUILD_DIR) installprefix=$(BUILD_DIR)/$(prefix) rpmbuild --with openrc --define "_topdir $(PKG_DIR)" -ba buildrpm/bpftune.spec
+ 
+ FORCE:
+ 	
+diff --color -ura a/sample_tuner/Makefile b/sample_tuner/Makefile
+--- a/sample_tuner/Makefile	2026-09-23 01:24:19.592935859 -0300
++++ b/sample_tuner/Makefile	2026-09-23 03:10:24.479693655 -0300
+@@ -26,6 +26,7 @@
+ LLVM_STRIP ?= llvm-strip
+ BPFTOOL ?= bpftool
+ BPF_INCLUDE := /usr/include
++BPF_CFLAGS := -g -O3
+ NL_INCLUDE := /usr/include/libnl3
+ INCLUDES := -I$(BPF_INCLUDE) -I$(NL_INCLUDE) -I/usr/include/uapi
+ 
+@@ -37,7 +38,7 @@
+ 
+ INSTALLPATH = $(installprefix)
+ 
+-CFLAGS = -fPIC -Wall -Wextra -march=native -g -I../include -std=c99
++CFLAGS += -fPIC -Wall -Wextra -g -I../include -std=c99
+ 
+ CFLAGS += -DBPFTUNE_VERSION='"$(BPFTUNE_VERSION)"' $(INCLUDES)
+ 
+@@ -88,12 +89,12 @@
+ 	$(QUIET_GEN)$(BPFTOOL) gen skeleton $< > $@
+ 
+ $(BPF_OBJS): $(patsubst %.o,%.c,$(BPF_OBJS)) ../include/bpftune/bpftune.bpf.h
+-	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -O2 -target bpf		\
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -target bpf		\
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) -o $(@);
+-	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) \
+ 		-o $(patsubst %.o,%.legacy.o,$(@));
+-	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -DBPFTUNE_LEGACY -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -DBPFTUNE_LEGACY -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) \
+ 		-o $(patsubst %.o,%.nobtf.o,$(@));
+ 
+diff --color -ura a/src/Makefile b/src/Makefile
+--- a/src/Makefile	2026-09-23 01:24:19.593583024 -0300
++++ b/src/Makefile	2026-09-23 03:10:08.837346961 -0300
+@@ -27,14 +27,14 @@
+ BPFTOOL ?= bpftool
+ BPF_INCLUDE := /usr/include
+ BPF_LOCAL_INCLUDE := /usr/local/include
+-BPF_CFLAGS := -g -fno-stack-protector -Wall -Wno-incompatible-pointer-types-discards-qualifiers
++BPF_CFLAGS := -g -O3 -fno-stack-protector -Wall -Wno-incompatible-pointer-types-discards-qualifiers
+ NL_INCLUDE := /usr/include/libnl3
+ INCLUDES := -I../include -I$(BPF_INCLUDE) -I$(BPF_LOCAL_INCLUDE) -I$(NL_INCLUDE) -I../include/uapi
+ INSTALL ?= install
+ 
+ SBINPATH ?= $(shell rpm --eval '%{_sbindir}' 2>/dev/null)
+ ifeq ($(SBINPATH),)
+-SBINPATH = /usr/sbin
++SBINPATH = /usr/bin
+ endif
+ 
+ SBINDIR = $(shell basename $(SBINPATH))
+@@ -75,7 +75,7 @@
+ VERSION = 0.4.2
+ VERSION_SCRIPT  := libbpftune.map
+ 
+-CFLAGS = -fPIC -Wall -Wextra -g -I../include -std=c99
++CFLAGS += -fPIC -Wall -Wextra -g -I../include -std=c99
+ 
+ CFLAGS += -DBPFTUNE_VERSION='"$(BPFTUNE_VERSION)"' \
+ 	  -DBPFTUNER_PREFIX_DIR='"$(prefix)"' \
+@@ -209,22 +209,21 @@
+ # check if GCC_BPF flag is set, otherwise use CLANG
+ ifeq ($(GCC_BPF),)
+ $(BPF_OBJS): $(patsubst %.o,%.c,$(BPF_OBJS)) ../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) -o $(@)
+ 
+ $(LEGACY_BPF_OBJS): $(patsubst %.legacy.o,%.c,$(LEGACY_BPF_OBJS)) ../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.legacy.o,%.c,$(@)) \
+ 		-o $(@)
+ 
+ $(NOBTF_BPF_OBJS): $(patsubst %.nobtf.o,%.c,$(NOBTF_BPF_OBJS)) ../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.nobtf.o,%.c,$(@)) \
+ 		-o $(@)
+ else
+-GCC_BPF_FLAGS := -g -O2 \
+-	$(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) \
+-	-gbtf -mcpu=v3 -mco-re -Wno-error=attributes \
++GCC_BPF_FLAGS := $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) \
++	-gbtf -mco-re -Wno-error=attributes \
+ 	-Wno-error=address-of-packed-member \
+ 	-Wno-compare-distinct-pointer-types \
+ 	$(INCLUDES)
+diff --color -ura a/src/bpftune.initd b/src/bpftune.initd
+--- a/src/bpftune.initd	2026-09-23 01:24:19.594113006 -0300
++++ b/src/bpftune.initd	2026-09-23 02:34:13.635767734 -0300
+@@ -12,7 +12,7 @@
+ }
+ 
+ checkconf() {
+-	"${command}" -S "${command_args}" 2>&1
++	"${command}" -S ${command_args} 2>&1
+ }
+ 
+ start_pre() {
+diff --color -ura a/src/bpftune.service b/src/bpftune.service
+--- a/src/bpftune.service	2026-09-23 01:24:19.594967355 -0300
++++ b/src/bpftune.service	2026-09-23 01:51:22.358080430 -0300
+@@ -6,7 +6,7 @@
+ After=systemd-sysctl.service network.target
+ 
+ [Service]
+-ExecStart=/usr/sbin/bpftune
++ExecStart=/usr/bin/bpftune
+ Restart=on-failure
+ 
+ [Install]
+diff --color -ura a/test/strategy/Makefile b/test/strategy/Makefile
+--- a/test/strategy/Makefile	2026-09-23 01:24:19.619254608 -0300
++++ b/test/strategy/Makefile	2026-09-23 03:10:40.988059566 -0300
+@@ -27,7 +27,7 @@
+ BPFTOOL ?= bpftool
+ GCC_BPF ?=
+ BPF_INCLUDE := /usr/include
+-BPF_CFLAGS := -g -fno-stack-protector -Wall
++BPF_CFLAGS := -g -O3 -fno-stack-protector -Wall
+ NL_INCLUDE := /usr/include/libnl3
+ INCLUDES := -I../../include -I$(BPF_INCLUDE) -I$(NL_INCLUDE) -I/usr/include/uapi
+ 
+@@ -39,7 +39,7 @@
+ 
+ INSTALLPATH = $(installprefix)
+ 
+-CFLAGS = -fPIC -Wall -Wextra -march=native -g -I../include -std=c99
++CFLAGS += -fPIC -Wall -Wextra -g -I../include -std=c99
+ 
+ CFLAGS += -DBPFTUNE_VERSION='"$(BPFTUNE_VERSION)"' $(INCLUDES)
+ 
+@@ -91,23 +91,22 @@
+ # check if GCC_BPF flag is set, otherwise use CLANG
+ ifeq ($(GCC_BPF),)
+ $(BPF_OBJS): $(patsubst %.o,%.c,$(BPF_OBJS)) ../../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) -o $(@)
+ 
+ $(LEGACY_BPF_OBJS): $(patsubst %.legacy.o,%.c,$(LEGACY_BPF_OBJS)) ../../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.legacy.o,%.c,$(@)) \
+ 		-o $(@)
+ 
+ $(NOBTF_BPF_OBJS): $(patsubst %.nobtf.o,%.c,$(NOBTF_BPF_OBJS)) ../../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.nobtf.o,%.c,$(@)) \
+ 		-o $(@)
+ 
+ else
+-GCC_BPF_FLAGS := -g -O2 \
+-	$(BPF_CFLAGS) -std=gnu17 -D__TARGET_ARCH_$(SRCARCH) \
+-	-gbtf -mcpu=v3 -Wno-error=attributes \
++GCC_BPF_FLAGS := $(BPF_CFLAGS) -std=gnu17 -D__TARGET_ARCH_$(SRCARCH) \
++	-gbtf -Wno-error=attributes \
+ 	-Wno-error=address-of-packed-member \
+ 	-Wno-compare-distinct-pointer-types \
+ 	$(INCLUDES)

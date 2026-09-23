@@ -1,0 +1,86 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=hyprqt6engine
+pkgname=${_pkgname}-git
+pkgver=r18.f665652
+pkgrel=1
+pkgdesc='QT6 Theme Provider for Hyprland'
+arch=(x86_64)
+url=https://github.com/Wizarsy/hyprqt6engine
+license=(BSD-3-Clause)
+depends=(
+  hyprlang
+  hyprutils
+  qt6-base
+  qt6-declarative
+  kconfig
+  kcolorscheme
+  kiconthemes
+)
+optdepends=()
+makedepends=(
+  clang
+  cmake
+  git
+  lld
+  llvm
+  ninja
+  pkgconf
+  vulkan-headers
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+options=(
+  !lto
+)
+source=(
+  "git+${url}.git"
+)
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS
+
+  local cmake_default_flags=(
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS}"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
+
+  cd "$srcdir"
+
+  cmake -S "$_pkgname" -B build -G Ninja \
+    "${cmake_default_flags[@]}"
+  
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+
+  install -Dm644 "${srcdir}/${_pkgname}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

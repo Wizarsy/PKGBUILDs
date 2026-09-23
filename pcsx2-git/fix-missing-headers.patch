@@ -1,0 +1,12 @@
+diff --color -ura a/pcsx2/PerformanceMetrics.h b/pcsx2/PerformanceMetrics.h
+--- a/pcsx2/PerformanceMetrics.h        2026-09-23 00:04:31.780161602 -0300
++++ b/pcsx2/PerformanceMetrics.h        2026-09-23 00:10:02.773699232 -0300
+@@ -4,6 +4,8 @@
+ #pragma once
+
+ #include <array>
++#include <cmath>
++
+ #include "common/Threading.h"
+
+ namespace PerformanceMetrics

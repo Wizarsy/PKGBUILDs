@@ -1,5 +1,10 @@
 # Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
 
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
 pkgbase=ttc-monocraft
 pkgname=(
   ttc-monocraft-nerd-fonts-patched
@@ -12,13 +17,13 @@ pkgdesc='A monospaced programming font inspired by the Minecraft typeface'
 arch=(any)
 url=https://github.com/IdreesInc/Monocraft
 license=(OFL-1.1)
-provides=($pkgbase)
-conflicts=($pkgbase)
+provides=("$pkgbase")
+conflicts=("$pkgbase")
 source=(
-  Monocraft-nerd-fonts-patched-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft-nerd-fonts-patched.ttc
-  Monocraft-no-ligatures-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft-no-ligatures.ttc
-  Monocraft-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft.ttc
-  Monocraft-${pkgver}-LICENSE::https://raw.githubusercontent.com/IdreesInc/Monocraft/refs/heads/main/LICENSE
+  "Monocraft-nerd-fonts-patched-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft-nerd-fonts-patched.ttc"
+  "Monocraft-no-ligatures-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft-no-ligatures.ttc"
+  "Monocraft-${pkgver}.ttc::${url}/releases/download/v${pkgver}/Monocraft.ttc"
+  "Monocraft-${pkgver}-LICENSE::https://raw.githubusercontent.com/IdreesInc/Monocraft/refs/heads/main/LICENSE"
 )
 sha256sums=('67f88ff9e7c6560f6cf60fb062fd353a72f62dc2654462950c65b63ed53d9754'
             '93ee79ba62b7d0a653dfd90d5c519f949e3ad64ec483046b417f2cc6943831d0'
