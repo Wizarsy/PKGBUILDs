@@ -30,6 +30,7 @@ pkgver() {
 
 build() {
   cd "${srcdir}/${_pkgname}"
+  
   7z a -r patches.zip patches/.
 }
 
