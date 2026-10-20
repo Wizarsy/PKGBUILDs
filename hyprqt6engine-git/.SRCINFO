@@ -1,8 +1,8 @@
 pkgbase = hyprqt6engine-git
 	pkgdesc = QT6 Theme Provider for Hyprland
-	pkgver = r18.f665652
+	pkgver = 0.1.0.r9.gd0ce29c
 	pkgrel = 1
-	url = https://github.com/Wizarsy/hyprqt6engine
+	url = https://github.com/hyprwm/hyprqt6engine
 	arch = x86_64
 	license = BSD-3-Clause
 	makedepends = clang
@@ -23,7 +23,9 @@ pkgbase = hyprqt6engine-git
 	provides = hyprqt6engine
 	conflicts = hyprqt6engine
 	options = !lto
-	source = git+https://github.com/Wizarsy/hyprqt6engine.git
+	source = git+https://github.com/hyprwm/hyprqt6engine.git
+	source = wizarsy-fix.patch
 	sha256sums = SKIP
+	sha256sums = f09310758bb1c9797902baa4579da94b0128233cbe1717f939fa523175124903
 
 pkgname = hyprqt6engine-git

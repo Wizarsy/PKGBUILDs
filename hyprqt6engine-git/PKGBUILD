@@ -7,11 +7,11 @@
 
 _pkgname=hyprqt6engine
 pkgname=${_pkgname}-git
-pkgver=r18.f665652
+pkgver=0.1.0.r9.gd0ce29c
 pkgrel=1
 pkgdesc='QT6 Theme Provider for Hyprland'
 arch=(x86_64)
-url=https://github.com/Wizarsy/hyprqt6engine
+url=https://github.com/hyprwm/hyprqt6engine
 license=(BSD-3-Clause)
 depends=(
   hyprlang
@@ -22,7 +22,6 @@ depends=(
   kcolorscheme
   kiconthemes
 )
-optdepends=()
 makedepends=(
   clang
   cmake
@@ -40,13 +39,21 @@ options=(
 )
 source=(
   "git+${url}.git"
+  wizarsy-fix.patch
 )
-sha256sums=('SKIP')
+sha256sums=('SKIP'
+            'f09310758bb1c9797902baa4579da94b0128233cbe1717f939fa523175124903')
 
 pkgver() {
   cd "$_pkgname"
 
-  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd "$_pkgname"
+
+  patch -p1 < ../wizarsy-fix.patch
 }
 
 build() {
@@ -56,7 +63,7 @@ build() {
 
   export CC CXX LDFLAGS
 
-  local cmake_default_flags=(
+  _cmake_default_flags=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_BUILD_TYPE=Release
@@ -73,7 +80,7 @@ build() {
   cd "$srcdir"
 
   cmake -S "$_pkgname" -B build -G Ninja \
-    "${cmake_default_flags[@]}"
+    "${_cmake_default_flags[@]}"
   
   cmake --build build
 }

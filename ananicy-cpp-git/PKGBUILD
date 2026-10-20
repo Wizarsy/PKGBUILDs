@@ -63,7 +63,7 @@ build() {
 
   export CC CXX LDFLAGS
 
-  cmake_default_flags=(
+  _cmake_default_flags=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_SKIP_RPATH=ON
@@ -79,7 +79,7 @@ build() {
   )
 
   cmake -S "$_pkgname" -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
+    "${_cmake_default_flags[@]}" \
     -DVERSION=${pkgver} \
     -DUSE_EXTERNAL_SPDLOG=ON \
     -DUSE_EXTERNAL_JSON=ON \

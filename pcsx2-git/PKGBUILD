@@ -7,7 +7,7 @@
 
 _pkgname=pcsx2
 pkgname=${_pkgname}-git
-pkgver=2.9.79.r1.g6bf754d
+pkgver=2.9.131.r0.g5b6e6e2
 pkgrel=1
 pkgdesc='A Sony PlayStation 2 emulator'
 arch=(x86_64)
@@ -36,8 +36,7 @@ depends=(
   # zstd
   # lz4
 )
-# optdepends=(
-# )
+optdepends=("${_pkgname}_patches")
 makedepends=(
   clang
   cmake
@@ -60,7 +59,6 @@ options=(
 source=(
   "git+${url}.git"
   qt-plugins.patch
-  fix-missing-headers.patch
   git+https://github.com/sammycage/plutovg.git#tag=v1.3.3
   git+https://github.com/sammycage/plutosvg.git#tag=v0.0.8
   git+https://github.com/jurplel/QtApng.git#tag=1.3.0
@@ -74,7 +72,6 @@ source=(
 )
 sha256sums=('SKIP'
             'a4c5380ad6cf9a563dd809ab74d2f24b4d8c7eb5adef53a718d0536a959c2ffb'
-            '875717cd9703d6284681857b962f95f8bed0ccfa849e1c693fcc6bb48d13d1a8'
             '03b09bab72cea11e56814b0821e7e046934d72ee224c10c91653fde8fb4aae31'
             '9a9fda98d8f6b462f744711584264cd463ac9cee8fd7a01f08e5e954f5452ef2'
             'b69518cbf08a62496d992a76bb80c5f7b419fc0f3895880ff40bdeaef9e83218'
@@ -86,17 +83,10 @@ sha256sums=('SKIP'
             'SKIP'
             'SKIP')
 
-pkgver() {
-  cd "$_pkgname"
-
-  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
-}
-
 prepare() {
   cd "$_pkgname"
 
   patch -p1 < ../qt-plugins.patch
-  patch -p1 < ../fix-missing-headers.patch
 
   cd "${srcdir}/libpng"
   patch -p1 < "${srcdir}/libpng-1.6.58-apng.patch"
@@ -109,9 +99,9 @@ prepare() {
   git -c protocol.file.allow=always submodule update --init ext/c4core
 
   cd ext/c4core
-  for submodule in cmake src/c4/ext/{debugbreak,fast_float}; do
-    git submodule set-url "${submodule}" "${srcdir}/${submodule##*/}"
-    git -c protocol.file.allow=always submodule update --init "${submodule}"
+  for _submodule in cmake src/c4/ext/{debugbreak,fast_float}; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
   done
 }
 
@@ -122,14 +112,14 @@ build() {
 
   export CC CXX LDFLAGS
 
-  external_deps="${srcdir}/deps"
+  _external_deps="${srcdir}/deps"
 
-  local cmake_default_flags=(
+  _cmake_default_flags=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_RPATH="/usr/lib/${_pkgname^^}"
-    -DCMAKE_PREFIX_PATH="${external_deps}"
+    -DCMAKE_PREFIX_PATH="${_external_deps}"
     -DCMAKE_C_COMPILER="${CC}"
     -DCMAKE_CXX_COMPILER="${CXX}"
     -DCMAKE_C_FLAGS="${CFLAGS}"
@@ -141,8 +131,8 @@ build() {
 
   cd "${srcdir}/libpng"
   cmake -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
-    -DCMAKE_INSTALL_PREFIX="${external_deps}" \
+    "${_cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=ON \
     -DPNG_SHARED=ON \
     -DPNG_TESTS=OFF \
@@ -153,15 +143,15 @@ build() {
 
   cd "${srcdir}/QtApng"
   cmake -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
-    -DCMAKE_INSTALL_PREFIX="${external_deps}"
+    "${_cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${_external_deps}"
   cmake --build build
   cmake --install build
 
   cd "${srcdir}/plutovg"
   cmake -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
-    -DCMAKE_INSTALL_PREFIX="${external_deps}" \
+    "${_cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=ON \
     -DPLUTOVG_BUILD_EXAMPLES=OFF 
   cmake --build build
@@ -169,8 +159,8 @@ build() {
 
   cd "${srcdir}/plutosvg"
   cmake -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
-    -DCMAKE_INSTALL_PREFIX="${external_deps}" \
+    "${_cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=ON \
     -DPLUTOSVG_ENABLE_FREETYPE=OFF \
     -DPLUTOSVG_BUILD_EXAMPLES=OFF
@@ -179,8 +169,8 @@ build() {
 
   cd "${srcdir}/rapidyaml"
   cmake -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
-    -DCMAKE_INSTALL_PREFIX="${external_deps}" \
+    "${_cmake_default_flags[@]}" \
+    -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=ON
   cmake --build build
   cmake --install build
@@ -188,37 +178,42 @@ build() {
   cd "$srcdir"
 
   cmake -S "$_pkgname" -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
+    "${_cmake_default_flags[@]}" \
+    -DQT_NO_PRIVATE_MODULE_WARNING=ON \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DOpenGL_GL_PREFERENCE=GLVND \
     -DDISABLE_ADVANCE_SIMD=ON \
+    -DUSE_LINKED_FFMPEG=ON \
     -DENABLE_QT_UI=ON \
     -DPACKAGE_MODE=ON \
     -DENABLE_TESTS=OFF \
     -DENABLE_GSRUNNER=OFF \
-    -DENABLE_SETCAP=OFF \
-    -DUSE_LINKED_FFMPEG=OFF \
-    -DFFMPEG_INCLUDE_DIRS="${srcdir}/${_pkgname}/3rdparty/ffmpeg/include"
+    -DENABLE_SETCAP=OFF
   
   cmake --build build
 }
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
-  install -Dm644 "${srcdir}/${_pkgname}/.github/workflows/scripts/linux/pcsx2-qt.desktop" "${pkgdir}/usr/share/applications/net.pcsx2.PCSX2.desktop"
-  install -Dm644 "${pkgdir}/usr/share/PCSX2/resources/icons/AppIconLarge.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/PCSX2.png"
+  install -Dm644 "${srcdir}/${_pkgname}/.github/workflows/scripts/linux/pcsx2-qt.desktop" \
+    "${pkgdir}/usr/share/applications/net.pcsx2.PCSX2.desktop"
+
+  install -Dm644 "${pkgdir}/usr/share/PCSX2/resources/icons/AppIconLarge.png" \
+    "${pkgdir}/usr/share/icons/hicolor/512x512/apps/PCSX2.png"
   
   mkdir -p "${pkgdir}/usr/share/metainfo"
   cd "${srcdir}/${_pkgname}"
   ".github/workflows/scripts/linux/generate-metainfo.sh" "${pkgdir}/usr/share/metainfo/net.pcsx2.PCSX2.appdata.xml"
 
-  for obj in "${srcdir}/deps/lib/${obj}"/{libpng16.so.16,libryml.so.0.12.1,libplutosvg.so.0,libplutovg.so.1}; do
-    install -Dm644 "${obj}" "${pkgdir}/usr/lib/${_pkgname^^}/${obj##*/}"
+  for _lib in "${srcdir}/deps/lib/"{libpng16.so.16,libryml.so.0.12.1,libplutosvg.so.0,libplutovg.so.1}; do
+    install -Dm644 "${_lib}" "${pkgdir}/usr/lib/PCSX2/${_lib##*/}"
   done
 
-  install -Dm755 -d "${pkgdir}/usr/lib/${_pkgname^^}/plugins/imageformats"
-  install -Dm644 "${srcdir}/deps/plugins/imageformats/"* "${pkgdir}/usr/lib/${_pkgname^^}/plugins/imageformats"
+  install -Dm755 -d "${pkgdir}/usr/lib/PCSX2/plugins/imageformats"
+
+  install -Dm644 "${srcdir}/deps/plugins/imageformats/"* \
+    "${pkgdir}/usr/lib/PCSX2/plugins/imageformats"
 
   install -Dm644 "${srcdir}/${_pkgname}/COPYING.GPLv3" \
-    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING.GPLv3"
+    "${pkgdir}/usr/share/licenses/PCSX2/COPYING.GPLv3"
 }

@@ -1,0 +1,727 @@
+diff --color -uraw a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt	2026-10-20 02:54:05.233902161 -0300
++++ b/CMakeLists.txt	2026-10-20 02:54:25.378429114 -0300
+@@ -7,8 +7,12 @@
+ project(hyprqt6engine VERSION ${VER} LANGUAGES CXX)
+ 
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
++set(QT_NO_PRIVATE_MODULE_WARNING ON)
+ 
+-find_package(Qt6 6.9 CONFIG REQUIRED COMPONENTS BuildInternals Core Widgets)
++find_package(Qt6 6.2 CONFIG REQUIRED COMPONENTS BuildInternals Core OPTIONAL_COMPONENTS Widgets QuickControls2)
++if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10)
++    find_package(Qt6 6.10 CONFIG REQUIRED COMPONENTS GuiPrivate OPTIONAL_COMPONENTS WidgetsPrivate)
++endif()
+ find_package(PkgConfig REQUIRED)
+ find_package(KF6Config)
+ find_package(KF6ColorScheme)
+diff --color -uraw a/common/CMakeLists.txt b/common/CMakeLists.txt
+--- a/common/CMakeLists.txt	2026-10-20 02:54:05.234043524 -0300
++++ b/common/CMakeLists.txt	2026-10-20 02:54:25.378579768 -0300
+@@ -1,6 +1,6 @@
+ project(hyprqt6engine-common)
+ 
+-add_definitions(-DHYPRQT6ENGINE_LIBRARY)
++add_definitions(-DHYPR_LIBRARY)
+ 
+ set(app_SRCS
+   common.cpp
+@@ -8,6 +8,6 @@
+ )
+ 
+ add_library(hyprqt6engine-common SHARED ${app_SRCS})
+-target_link_libraries(hyprqt6engine-common PRIVATE Qt6::Gui $<TARGET_NAME_IF_EXISTS:KF6::ConfigCore> $<TARGET_NAME_IF_EXISTS:KF6::ColorScheme> hyprutils hyprlang)
++target_link_libraries(hyprqt6engine-common PRIVATE Qt6::Gui Qt6::GuiPrivate $<TARGET_NAME_IF_EXISTS:KF6::ConfigCore> $<TARGET_NAME_IF_EXISTS:KF6::ColorScheme> hyprutils hyprlang)
+ target_compile_definitions(hyprqt6engine-common PRIVATE $<$<TARGET_EXISTS:KF6::ConfigCore>:KF_CONFIGCORE_LIB> $<$<TARGET_EXISTS:KF6::ColorScheme>:KF_COLORSCHEME_LIB>)
+ install(TARGETS hyprqt6engine-common DESTINATION ${CMAKE_INSTALL_LIBDIR})
+diff --color -uraw a/common/common.cpp b/common/common.cpp
+--- a/common/common.cpp	2026-10-20 02:54:05.234075735 -0300
++++ b/common/common.cpp	2026-10-20 02:54:25.378619279 -0300
+@@ -1,6 +1,6 @@
+ #include <QDir>
+ #include <QLocale>
+-#include <QLatin1String>
++// #include <QLatin1String>
+ #include <QStandardPaths>
+ #include <QRegularExpression>
+ #include <QFile>
+@@ -18,13 +18,18 @@
+ 
+ QSet<CHyprStyle::CStyleInstance*> CHyprStyle::styleInstances;
+ 
+-//
++#if defined KF_CONFIGCORE_LIB && defined KF_COLORSCHEME_LIB
++bool CHyprStyle::isKColorScheme(const QString& filePath) {
++    return filePath.toLower().endsWith(".colors");
++}
++#endif
++
+ std::optional<QPalette> CHyprStyle::loadColorScheme(const QString& filePath) {
+     if (filePath.isEmpty())
+         return std::nullopt;
+ 
+ #if defined KF_CONFIGCORE_LIB && defined KF_COLORSCHEME_LIB
+-    if (filePath.toLower().endsWith(".colors"))
++    if (isKColorScheme(filePath))
+         return KColorScheme::createApplicationPalette(KSharedConfig::openConfig(filePath));
+ #endif
+ 
+diff --color -uraw a/common/common.hpp b/common/common.hpp
+--- a/common/common.hpp	2026-10-20 02:54:05.234108406 -0300
++++ b/common/common.hpp	2026-10-20 02:54:25.378651749 -0300
+@@ -47,9 +47,10 @@
+       public:
+         virtual void reloadSettings() = 0;
+     };
+-
++#if defined KF_CONFIGCORE_LIB && defined KF_COLORSCHEME_LIB
++    static bool isKColorScheme(const QString& filePath);
++#endif
+     static std::optional<QPalette> loadColorScheme(const QString& filePath);
+-
+     static void                    registerStyleInstance(CStyleInstance* instance);
+     static void                    unregisterStyleInstance(CStyleInstance* instance);
+     static void                    reloadStyleInstanceSettings();
+diff --color -uraw a/common/config/ConfigManager.cpp b/common/config/ConfigManager.cpp
+--- a/common/config/ConfigManager.cpp	2026-10-20 02:54:05.234153567 -0300
++++ b/common/config/ConfigManager.cpp	2026-10-20 02:54:25.378704611 -0300
+@@ -1,8 +1,11 @@
+ #include "ConfigManager.hpp"
+ #include "../helpers/Log.hpp"
+ #include <hyprutils/path/Path.hpp>
++#include <Qt>
++#include <qpa/qplatformtheme.h>
++#include <qpa/qplatformdialoghelper.h>
+ 
+-static std::string getMainConfigPath() {
++std::string CConfigManager::getMainConfigPath() {
+     static const auto paths = Hyprutils::Path::findConfig("hyprqt6engine");
+     if (paths.first.has_value())
+         return paths.first.value();
+@@ -19,19 +22,31 @@
+     m_config.addConfigValue("theme:color_scheme", Hyprlang::STRING{""});
+     m_config.addConfigValue("theme:icon_theme", Hyprlang::STRING{""});
+     m_config.addConfigValue("theme:style", Hyprlang::STRING{""});
++    m_config.addConfigValue("theme:style_sheet", Hyprlang::STRING{""});
+     m_config.addConfigValue("theme:font_fixed", Hyprlang::STRING{"monospace"});
++    m_config.addConfigValue("theme:font_fixed_style", Hyprlang::STRING{"Regular"});
+     m_config.addConfigValue("theme:font_fixed_size", Hyprlang::INT{11});
+     m_config.addConfigValue("theme:font", Hyprlang::STRING{"Sans Serif"});
++    m_config.addConfigValue("theme:font_style", Hyprlang::STRING{"Regular"});
+     m_config.addConfigValue("theme:font_size", Hyprlang::INT{11});
++    m_config.addConfigValue("theme:dialogs", Hyprlang::STRING{"default"});
+ 
+-    m_config.addConfigValue("misc:single_click_activate", Hyprlang::INT{1});
++    m_config.addConfigValue("misc:dialog_have_icons", Hyprlang::INT{1});
+     m_config.addConfigValue("misc:menus_have_icons", Hyprlang::INT{1});
++    m_config.addConfigValue("misc:single_click_activate", Hyprlang::INT{1});
+     m_config.addConfigValue("misc:shortcuts_for_context_menus", Hyprlang::INT{1});
++    // https://doc.qt.io/qt-6/qt.html#ToolButtonStyle-enum
++    m_config.addConfigValue("misc:tool_button_style", Hyprlang::INT{Qt::ToolButtonFollowStyle});
++    // https://github.com/qt/qtbase/blob/255a036f0449e1dfb4e41054376ed89edc00f1e4/src/gui/kernel/qplatformtheme.h#L263
++    m_config.addConfigValue("misc:keyboard_scheme", Hyprlang::INT{QPlatformTheme::KdeKeyboardScheme});
++    // https://doc.qt.io/qt-6/qdialogbuttonbox.html#ButtonLayout-enum
++    m_config.addConfigValue("misc:button_box_layout", Hyprlang::INT{QPlatformDialogHelper::WinLayout});
+ 
+     m_config.commence();
++}
+ 
++void CConfigManager::refresh() {
+     auto result = m_config.parse();
+-
+     if (result.error)
+         Debug::log(ERR, "Config has errors:\n{}\nProceeding ignoring faulty entries", result.getError());
+ }
+diff --color -uraw a/common/config/ConfigManager.hpp b/common/config/ConfigManager.hpp
+--- a/common/config/ConfigManager.hpp	2026-10-20 02:54:05.234183767 -0300
++++ b/common/config/ConfigManager.hpp	2026-10-20 02:54:25.378736651 -0300
+@@ -8,6 +8,8 @@
+   public:
+     CConfigManager();
+     void init();
++    void               refresh();
++    static std::string getMainConfigPath();
+ 
+     template <typename T>
+     Hyprlang::CSimpleConfigValue<T> getValue(const std::string& name) {
+diff --color -uraw a/hyprqtplugin/CMakeLists.txt b/hyprqtplugin/CMakeLists.txt
+--- a/hyprqtplugin/CMakeLists.txt	2026-10-20 02:54:05.234416163 -0300
++++ b/hyprqtplugin/CMakeLists.txt	2026-10-20 02:54:25.378976797 -0300
+@@ -1,15 +1,13 @@
+ project(hyprqtplugin)
+ 
+-find_package(Qt6 REQUIRED COMPONENTS Gui GuiPrivate)
+-
+ set(app_SRCS
+   main.cpp
+   PlatformTheme.cpp
+-  helpers/MiscFunctions.cpp
++  # helpers/MiscFunctions.cpp
+ )
+ 
+-add_library(hyprqtplugin MODULE ${app_SRCS})
+-set_target_properties(hyprqtplugin PROPERTIES OUTPUT_NAME hyprqt6engine)
+-target_link_libraries(hyprqtplugin PRIVATE $<TARGET_NAME_IF_EXISTS:Qt6::WidgetsPrivate> Qt6::GuiPrivate $<TARGET_NAME_IF_EXISTS:Qt6::QuickControls2> $<TARGET_NAME_IF_EXISTS:KF6::IconThemes> hyprutils hyprlang hyprqt6engine-common)
+-target_compile_definitions(hyprqtplugin PRIVATE $<$<TARGET_EXISTS:KF6::IconThemes>:KF_ICONTHEMES_LIB>)
+-install(TARGETS hyprqtplugin DESTINATION ${PLUGINDIR}/platformthemes)
++add_library(hyprqt6engine MODULE ${app_SRCS})
++set_target_properties(hyprqt6engine PROPERTIES OUTPUT_NAME hyprqt6engine)
++target_link_libraries(hyprqt6engine PRIVATE $<TARGET_NAME_IF_EXISTS:Qt6::WidgetsPrivate> Qt6::GuiPrivate $<TARGET_NAME_IF_EXISTS:Qt6::QuickControls2> $<TARGET_NAME_IF_EXISTS:KF6::IconThemes> hyprutils hyprlang hyprqt6engine-common)
++target_compile_definitions(hyprqt6engine PRIVATE $<$<TARGET_EXISTS:KF6::IconThemes>:KF_ICONTHEMES_LIB> $<$<TARGET_EXISTS:KF6::ConfigCore>:KF_CONFIGCORE_LIB> $<$<TARGET_EXISTS:KF6::ColorScheme>:KF_COLORSCHEME_LIB>)
++install(TARGETS hyprqt6engine DESTINATION ${PLUGINDIR}/platformthemes)
+diff --color -uraw a/hyprqtplugin/PlatformTheme.cpp b/hyprqtplugin/PlatformTheme.cpp
+--- a/hyprqtplugin/PlatformTheme.cpp	2026-10-20 02:54:05.234416163 -0300
++++ b/hyprqtplugin/PlatformTheme.cpp	2026-10-20 02:54:25.379013198 -0300
+@@ -30,16 +30,17 @@
+ #include <QSettings>
+ #include <QGuiApplication>
+ #include <QScreen>
+-#include <QFont>
++// #include <QFont>
++#include <QFontDatabase>
+ #include <QDir>
+ #include <QStandardPaths>
+-#include <QPalette>
++// #include <QPalette>
+ #include <QTimer>
+-#include <QIcon>
++// #include <QIcon>
+ #include <QRegularExpression>
+ #include <QMimeDatabase>
+ #ifdef QT_WIDGETS_LIB
+-#include <QStyle>
++// #include <QStyle>
+ #include <QStyleFactory>
+ #include <QApplication>
+ #include <QWidget>
+@@ -54,7 +55,7 @@
+ #include <QQuickStyle>
+ #endif
+ 
+-#include <QStringList>
++// #include <QStringList>
+ #include <qpa/qplatformthemefactory_p.h>
+ #include <qpa/qwindowsysteminterface.h>
+ 
+@@ -63,36 +64,45 @@
+ #include <KIconLoader>
+ #endif
+ 
+-#include <string_view>
++// #include <string_view>
+ 
+ #include "PlatformTheme.hpp"
+ #include "config/ConfigManager.hpp"
+-#include "helpers/MiscFunctions.hpp"
+-#include "helpers/Log.hpp"
+-#include "common.hpp"
++// #include "helpers/MiscFunctions.hpp"
++// #include "helpers/Log.hpp"
+ 
+ //QT_QPA_PLATFORMTHEME=hyprqt6engine
+ 
+-CHyprPlatformTheme::CHyprPlatformTheme() : m_fixedFont(*QGenericUnixTheme::font(QPlatformTheme::FixedFont)), m_font(*QGenericUnixTheme::font(QPlatformTheme::SystemFont)) {
++CHyprPlatformTheme::CHyprPlatformTheme() : m_font(*QGenericUnixTheme::font(QPlatformTheme::SystemFont)), m_fixedFont(*QGenericUnixTheme::font(QPlatformTheme::FixedFont)) {
+     g_pConfigManager = makeUnique<CConfigManager>();
+     g_pConfigManager->init();
+-
+-    static auto PCOLORSCHEME = g_pConfigManager->getValue<Hyprlang::STRING>("theme:color_scheme");
+-
+     if (QGuiApplication::desktopSettingsAware()) {
+-        applySettings();
++        readSettings();
+         QMetaObject::invokeMethod(this, &CHyprPlatformTheme::applySettings, Qt::QueuedConnection);
++        QMetaObject::invokeMethod(this, &CHyprPlatformTheme::createFSWatcher, Qt::QueuedConnection);
+         //must be applied before Q_COREAPP_STARTUP_FUNCTION execution
+-        if (isKColorScheme(*PCOLORSCHEME))
+-            qApp->setProperty("KDE_COLOR_SCHEME_PATH", *PCOLORSCHEME);
+-#if defined QT_WIDGETS_LIB && defined QT_QUICKCONTROLS2_LIB
+-        if (hasWidgets())
++#if defined KF_CONFIGCORE_LIB && defined KF_COLORSCHEME_LIB
++        if (CHyprStyle::isKColorScheme(m_schemePath))
++            qApp->setProperty("KDE_COLOR_SCHEME_PATH", m_schemePath);
++#endif
++#ifdef QT_WIDGETS_LIB
++        if (hasWidgets()) {
++            //style could use various interfaces aren't initialized yet
++            QTimer::singleShot(0, this, [this] {
++                m_style.reset(QStyleFactory::create(u"hypr-style"_s));
++                applySettings();
++            });
++#ifdef QT_QUICKCONTROLS2_LIB
+             //don't override the value explicitly set by the user
+-            if (QQuickStyle::name().isEmpty() || QQuickStyle::name() == QLatin1String("Fusion"))
+-                QQuickStyle::setStyle(QLatin1String("org.kde.desktop"));
++            if (QQuickStyle::name().isEmpty() || QQuickStyle::name() == "Fusion"_L1)
++                QQuickStyle::setStyle("org.kde.desktop"_L1);
+ #endif
+     }
++#endif
++    }
++#if defined KF_CONFIGCORE_LIB && defined KF_COLORSCHEME_LIB
+     QCoreApplication::instance()->installEventFilter(this);
++#endif
+ }
+ 
+ bool CHyprPlatformTheme::usePlatformNativeDialog(DialogType type) const {
+@@ -103,6 +113,34 @@
+     return m_theme ? m_theme->createPlatformDialogHelper(type) : QGenericUnixTheme::createPlatformDialogHelper(type);
+ }
+ 
++#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
++Qt::ColorScheme CHyprPlatformTheme::colorScheme() const {
++    //m_inColorScheme prevents QPlatformTheme::palette -> QPlatformThemePrivate::initializeSystemPalette
++    //-> qt_fusionPalette -> Qt6CTPlatformTheme::colorScheme infinite recursion
++    if (m_isIgnored || m_inColorScheme)
++        return QGenericUnixTheme::colorScheme();
++
++    m_inColorScheme = true;
++#ifdef QT_WIDGETS_LIB
++    //follow QApplicationPrivate::basePalette() logic
++    QPalette palette = m_style ? m_style->standardPalette() : Qt::gray;
++    if (const QPalette* themePalette = this->palette())
++        palette = themePalette->resolve(palette);
++    palette.setResolveMask(0);
++    if (m_style)
++        m_style->polish(palette);
++#else
++    //follow QGuiApplicationPrivate::basePalette() logic
++    const QPalette palette = this->palette() ? *this->palette() : Qt::gray;
++#endif
++    m_inColorScheme = false;
++
++    return palette.windowText().color().lightness() > palette.window().color().lightness() ? Qt::ColorScheme::Dark :
++        palette.windowText().color().lightness() < palette.window().color().lightness()    ? Qt::ColorScheme::Light :
++                                                                                             QGenericUnixTheme::colorScheme();
++}
++#endif
++
+ const QPalette* CHyprPlatformTheme::palette(QPlatformTheme::Palette type) const {
+     if (type == QPlatformTheme::SystemPalette && m_palette)
+         return &*m_palette;
+@@ -139,28 +177,26 @@
+     if (m_isIgnored)
+         return QGenericUnixTheme::themeHint(hint);
+ 
+-    static auto PICONTHEME                = g_pConfigManager->getValue<Hyprlang::STRING>("theme:icon_theme");
+-    static auto PSHORTCUTSFORCONTEXTMENUS = g_pConfigManager->getValue<Hyprlang::INT>("misc:shortcuts_for_context_menus");
+-
+     switch (hint) {
+         case QPlatformTheme::CursorFlashTime: return 1000;
+-        case MouseDoubleClickInterval: return 400;
+-        case QPlatformTheme::ToolButtonStyle: return 4;
+-        case QPlatformTheme::SystemIconThemeName: return *PICONTHEME;
++        case QPlatformTheme::MouseDoubleClickInterval: return 400;
++        case QPlatformTheme::ShowIconsInMenus: return m_showIconsInMenus;
++        case QPlatformTheme::ToolButtonStyle: return m_toolButtonStyle;
++        case QPlatformTheme::SystemIconThemeName: return m_iconTheme;
+         case QPlatformTheme::StyleNames: return {u"hypr-style"_s};
+         case QPlatformTheme::IconThemeSearchPaths: return iconPaths();
+-        case QPlatformTheme::DialogButtonBoxLayout: return 0;
+-        case QPlatformTheme::KeyboardScheme: return 2;
++        case QPlatformTheme::DialogButtonBoxLayout: return m_buttonBoxLayout;
++        case QPlatformTheme::KeyboardScheme: return m_keyboardScheme;
+         case QPlatformTheme::UiEffects: return {};
+         case QPlatformTheme::WheelScrollLines: return 3;
+-        case QPlatformTheme::ShowShortcutsInContextMenus: return !!*PSHORTCUTSFORCONTEXTMENUS;
++        case QPlatformTheme::ShowShortcutsInContextMenus: return m_showShortcutsInContextMenus;
+         default: return QGenericUnixTheme::themeHint(hint);
+     }
+ }
+ 
+ QIcon CHyprPlatformTheme::fileIcon(const QFileInfo& fileInfo, QPlatformTheme::IconOptions iconOptions) const {
+     if ((iconOptions & DontUseCustomDirectoryIcons) && fileInfo.isDir())
+-        return QIcon::fromTheme(QLatin1String("inode-directory"));
++        return QIcon::fromTheme("inode-directory"_L1);
+ 
+     QMimeDatabase db;
+     QMimeType     type = db.mimeTypeForFile(fileInfo);
+@@ -179,41 +215,145 @@
+         return;
+     }
+ 
+-    static auto PCOLORSCHEME   = g_pConfigManager->getValue<Hyprlang::STRING>("theme:color_scheme");
+-    static auto PFONTFIXED     = g_pConfigManager->getValue<Hyprlang::STRING>("theme:font_fixed");
+-    static auto PFONTFIXEDSIZE = g_pConfigManager->getValue<Hyprlang::INT>("theme:font_fixed_size");
+-    static auto PFONT          = g_pConfigManager->getValue<Hyprlang::STRING>("theme:font");
+-    static auto PFONTSIZE      = g_pConfigManager->getValue<Hyprlang::INT>("theme:font_size");
+-
+-    m_font      = QFont(QString{*PFONT}, *PFONTSIZE);
+-    m_fixedFont = QFont(QString{*PFONTFIXED}, *PFONTFIXEDSIZE);
+-    m_palette   = CHyprStyle::loadColorScheme(std::string_view(*PCOLORSCHEME).empty() ? QString() : *PCOLORSCHEME);
+-
+-    if (isKColorScheme(*PCOLORSCHEME))
+-        qApp->setProperty("KDE_COLOR_SCHEME_PATH", *PCOLORSCHEME);
++    //load dialogs
++    if (!m_update) {
++        //do not mix gtk2 style and gtk3 dialogs
++        QStringList keys    = QPlatformThemeFactory::keys();
++        QString     dialogs = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:dialogs");
++        QString     style   = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:style");
++
++        if (style.endsWith(u"gtk2"_s) && dialogs == "gtk3"_L1)
++            dialogs = u"gtk2"_s;
++        if (keys.contains(dialogs))
++            m_theme.reset(QPlatformThemeFactory::create(dialogs));
++    }
++
++#if defined KF_CONFIGCORE_LIB && defined KF_COLORSCHEME_LIB
++    if (CHyprStyle::isKColorScheme(m_schemePath))
++        qApp->setProperty("KDE_COLOR_SCHEME_PATH", m_schemePath);
+     else if (m_update)
+         qApp->setProperty("KDE_COLOR_SCHEME_PATH", QVariant());
++#endif
++
++#ifdef QT_WIDGETS_LIB
++    if (hasWidgets()) {
++        if (m_update) {
++            if (FontHash* hash = qt_app_fonts_hash(); hash && hash->size())
++                hash->clear();
++            CHyprStyle::reloadStyleInstanceSettings();
++        }
+ 
++        if (m_userStyleSheet != m_prevStyleSheet) {
++            // prepend our stylesheet to that of the application
++            // (first removing any previous stylesheet we have set)
++            QString appStyleSheet = qApp->styleSheet();
++            int     prevIndex     = appStyleSheet.indexOf(m_prevStyleSheet);
++            if (prevIndex >= 0) {
++                appStyleSheet.remove(prevIndex, m_prevStyleSheet.size());
++                qApp->setStyleSheet(m_userStyleSheet + appStyleSheet);
++            }
++            m_prevStyleSheet = m_userStyleSheet;
++        }
++    }
++#endif
+     if (m_update) {
+         QWindowSystemInterface::handleThemeChange();
+         QCoreApplication::postEvent(qGuiApp, new QEvent(QEvent::ApplicationFontChange));
++        QCoreApplication::setAttribute(Qt::AA_DontShowIconsInMenus, !m_showIconsInMenus);
++        QCoreApplication::setAttribute(Qt::AA_DontShowShortcutsInContextMenus, !m_showShortcutsInContextMenus);
++        QIcon::setThemeName(m_iconTheme);
+     }
+-
+ #ifdef QT_WIDGETS_LIB
+     if (hasWidgets() && m_update) {
+ #if QT_CONFIG(graphicsview)
+         for (auto scene : std::as_const(QApplicationPrivate::instance()->scene_list))
+             QCoreApplication::postEvent(scene, new QEvent(QEvent::ApplicationFontChange));
+ #endif
+-
+-        for (QWidget* w : QApplication::allWidgets())
++        for (QWidget* w : QApplication::allWidgets()) {
+             QCoreApplication::postEvent(w, new QEvent(QEvent::ThemeChange));
++            w->update();
++        }
+     }
+ #endif
+ 
+     m_update = true;
+ }
+ 
++void CHyprPlatformTheme::createFSWatcher() {
++    static const QString configPath = QString::fromStdString(CConfigManager::getMainConfigPath());
++    QFileSystemWatcher*  watcher    = new QFileSystemWatcher(this);
++    watcher->addPath(configPath);
++
++    QTimer* timer = new QTimer(this);
++    timer->setSingleShot(true);
++    timer->setInterval(3000);
++    connect(watcher, &QFileSystemWatcher::fileChanged, timer, qOverload<>(&QTimer::start));
++    connect(timer, &QTimer::timeout, this, &CHyprPlatformTheme::updateSettings);
++}
++
++void CHyprPlatformTheme::updateSettings() {
++    readSettings();
++    applySettings();
++}
++
++void CHyprPlatformTheme::readSettings() {
++    QStringList families = QFontDatabase::families();
++    QStringList styles;
++
++    g_pConfigManager->refresh();
++
++    QString font_fixed       = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:font_fixed");
++    int     font_fixed_size  = *g_pConfigManager->getValue<Hyprlang::INT>("theme:font_fixed_size");
++    QString font_fixed_style = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:font_fixed_style");
++
++    QString font       = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:font");
++    int     font_size  = *g_pConfigManager->getValue<Hyprlang::INT>("theme:font_size");
++    QString font_style = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:font_style");
++
++    m_schemePath = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:color_scheme");
++    m_palette    = CHyprStyle::loadColorScheme(m_schemePath);
++    m_iconTheme  = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:icon_theme");
++
++    m_font            = *QGenericUnixTheme::font(QPlatformTheme::SystemFont);
++    m_fixedFont       = *QGenericUnixTheme::font(QPlatformTheme::FixedFont);
++    m_keyboardScheme  = QGenericUnixTheme::themeHint(QPlatformTheme::KeyboardScheme).toInt();
++    m_buttonBoxLayout = QGenericUnixTheme::themeHint(QPlatformTheme::DialogButtonBoxLayout).toInt();
++
++    if (families.contains(font)) {
++        m_font = QFont(font, font_size);
++        styles = QFontDatabase::styles(m_font.family());
++        if (styles.contains(font_style)) {
++            m_font.setStyleName(font_style);
++        }
++    }
++
++    if (families.contains(font_fixed)) {
++        m_fixedFont = QFont(font_fixed, font_fixed_size);
++        styles      = QFontDatabase::styles(m_fixedFont.family());
++        if (styles.contains(font_fixed_style)) {
++            m_fixedFont.setStyleName(font_fixed_style);
++        }
++    }
++
++    m_showShortcutsInContextMenus = !!*g_pConfigManager->getValue<Hyprlang::INT>("misc:shortcuts_for_context_menus");
++    m_showIconsInMenus            = !!*g_pConfigManager->getValue<Hyprlang::INT>("misc:menus_have_icons");
++    m_toolButtonStyle             = *g_pConfigManager->getValue<Hyprlang::INT>("misc:tool_button_style");
++    m_keyboardScheme              = *g_pConfigManager->getValue<Hyprlang::INT>("misc:keyboard_scheme");
++    m_buttonBoxLayout             = *g_pConfigManager->getValue<Hyprlang::INT>("misc:button_box_layout");
++
++    // m_doubleClickInterval = QGenericUnixTheme::themeHint(QPlatformTheme::MouseDoubleClickInterval).toInt();
++
++    // m_cursorFlashTime = QGenericUnixTheme::themeHint(QPlatformTheme::CursorFlashTime).toInt();
++
++    // m_wheelScrollLines = QGenericUnixTheme::themeHint(QPlatformTheme::WheelScrollLines).toInt();
++
++    //load style sheets
++#ifdef QT_WIDGETS_LIB
++    QStringList qssPaths = QStringList(*g_pConfigManager->getValue<Hyprlang::STRING>("theme:style_sheet"));
++    m_userStyleSheet     = loadStyleSheets(qssPaths);
++#endif
++}
++
+ #ifdef QT_WIDGETS_LIB
+ bool CHyprPlatformTheme::hasWidgets() {
+     return qobject_cast<QApplication*>(qApp) != nullptr;
+@@ -238,14 +378,14 @@
+     return content;
+ }
+ 
++#if defined KF_CONFIGCORE_LIB && defined KF_COLORSCHEME_LIB
+ //There's such a thing as KColorSchemeManager that lets the user to change the color scheme
+ //application-wide and we should re-apply the color scheme if KCSM resets it to the default
+ //which leads KColorScheme to get the color scheme from kdeglobals which won't help us.
+ bool CHyprPlatformTheme::eventFilter(QObject* obj, QEvent* e) {
+-    static auto PCOLORSCHEME = g_pConfigManager->getValue<Hyprlang::STRING>("theme:color_scheme");
+-
+     if (obj == qApp && e->type() == QEvent::DynamicPropertyChange && static_cast<QDynamicPropertyChangeEvent*>(e)->propertyName() == "KDE_COLOR_SCHEME_PATH" &&
+-        qApp->property("KDE_COLOR_SCHEME_PATH").toString().isEmpty() && isKColorScheme(*PCOLORSCHEME))
++        qApp->property("KDE_COLOR_SCHEME_PATH").toString().isEmpty() && CHyprStyle::isKColorScheme(m_schemePath))
+         applySettings();
+     return QObject::eventFilter(obj, e);
+ }
++#endif
+\ No newline at end of file
+diff --color -uraw a/hyprqtplugin/PlatformTheme.hpp b/hyprqtplugin/PlatformTheme.hpp
+--- a/hyprqtplugin/PlatformTheme.hpp	2026-10-20 02:54:05.234482534 -0300
++++ b/hyprqtplugin/PlatformTheme.hpp	2026-10-20 02:54:25.379062279 -0300
+@@ -1,6 +1,7 @@
+ #pragma once
+ 
+ #include <qpa/qplatformtheme.h>
++#include <qpa/qplatformdialoghelper.h>
+ #if (QT_VERSION >= QT_VERSION_CHECK(6, 10, 0))
+ #include <private/qgenericunixtheme_p.h>
+ #else
+@@ -8,10 +9,15 @@
+ #endif
+ #include <QObject>
+ #include <QFont>
+-#include <QPalette>
+-#include <QLoggingCategory>
++// #include <QPalette>
++// #include <QLoggingCategory>
+ #include <QIcon>
+ #include <QFileInfo>
++#ifdef QT_WIDGETS_LIB
++#include <QStyle>
++#endif
++
++#include "common.hpp"
+ 
+ class CHyprPlatformTheme : public QObject, public QGenericUnixTheme {
+     Q_OBJECT
+@@ -25,6 +31,9 @@
+     //virtual void showPlatformMenuBar() {}
+     virtual bool                   usePlatformNativeDialog(DialogType type) const override;
+     virtual QPlatformDialogHelper* createPlatformDialogHelper(DialogType type) const override;
++#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
++    virtual Qt::ColorScheme colorScheme() const override;
++#endif
+     virtual const QPalette*        palette(Palette type = SystemPalette) const override;
+     virtual const QFont*           font(Font type = SystemFont) const override;
+     virtual QVariant               themeHint(ThemeHint hint) const override;
+@@ -44,17 +53,34 @@
+ 
+   private slots:
+     void applySettings();
++    void createFSWatcher();
++    void updateSettings();
+ 
+   private:
++    void readSettings();
+ #ifdef QT_WIDGETS_LIB
+     bool hasWidgets();
+ #endif
+     QString                         loadStyleSheets(const QStringList& paths);
+-    QString                         m_prevStyleSheet;
+-    QFont                           m_fixedFont, m_font;
++    QString                 m_schemePath, m_iconTheme, m_userStyleSheet, m_prevStyleSheet;
+     std::optional<QPalette>         m_palette;
+-    bool                            m_update    = false;
++    QFont                   m_font, m_fixedFont;
++    // int m_doubleClickInterval;
++    // int m_cursorFlashTime;
++    // int m_uiEffects;
++    // int m_wheelScrollLines;
++    int                             m_buttonBoxLayout             = QPlatformDialogHelper::WinLayout;
++    int                             m_keyboardScheme              = QPlatformTheme::KdeKeyboardScheme;
++    int                             m_toolButtonStyle             = Qt::ToolButtonFollowStyle;
++    bool                            m_showShortcutsInContextMenus = true;
++    bool                            m_showIconsInMenus            = true;
+     bool                            m_isIgnored = false;
++    bool                            m_update                      = false;
++    mutable bool                    m_inColorScheme               = false;
+     std::unique_ptr<QPlatformTheme> m_theme;
++#ifdef QT_WIDGETS_LIB
++    std::unique_ptr<QStyle> m_style;
++#endif
+ };
+ 
++// Q_DECLARE_LOGGING_CATEGORY(hypr)
+diff --color -uraw a/hyprqtplugin/main.cpp b/hyprqtplugin/main.cpp
+--- a/hyprqtplugin/main.cpp	2026-10-20 02:54:05.234631488 -0300
++++ b/hyprqtplugin/main.cpp	2026-10-20 02:54:25.379227113 -0300
+@@ -7,6 +7,7 @@
+ class CHyprQT6EngineThemePlugin : public QPlatformThemePlugin {
+     Q_OBJECT;
+     Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QPA.QPlatformThemeFactoryInterface.5.1" FILE "engine.json");
++
+   public:
+     QPlatformTheme* create(const QString& key, const QStringList& params) override {
+         Q_UNUSED(params);
+@@ -17,11 +18,11 @@
+         }
+ 
+         if (v.minorVersion() != QT_VERSION_MINOR) {
+-            Debug::log(WARN, "hyprqt6engine was compiled against an incompatible qt version. Compiled against {}.{} but has {}.{}. Things might break!", QT_VERSION_MAJOR, QT_VERSION_MINOR,
+-                       v.majorVersion(), v.minorVersion());
++            Debug::log(WARN, "hyprqt6engine was compiled against an incompatible qt version. Compiled against {}.{} but has {}.{}. Things might break!", QT_VERSION_MAJOR,
++                       QT_VERSION_MINOR, v.majorVersion(), v.minorVersion());
+         }
+ 
+-        if (key.toLower() == QLatin1String("hyprqt6engine"))
++        if (key.toLower() == "hyprqt6engine"_L1)
+             return new CHyprPlatformTheme();
+         return nullptr;
+     }
+diff --color -uraw a/style/ProxyStyle.cpp b/style/ProxyStyle.cpp
+--- a/style/ProxyStyle.cpp	2026-10-20 02:54:05.234787282 -0300
++++ b/style/ProxyStyle.cpp	2026-10-20 02:54:25.379386086 -0300
+@@ -1,36 +1,41 @@
+-#include <QSettings>
++// #include <QSettings>
+ #include <QStyleFactory>
+-#include <string_view>
++// #include <string_view>
+ #include "ProxyStyle.hpp"
+ #include "config/ConfigManager.hpp"
+ 
+ CHyprProxyStyle::CHyprProxyStyle() {
+-    CHyprStyle::registerStyleInstance(this);
+     g_pConfigManager = makeUnique<CConfigManager>();
+     g_pConfigManager->init();
+-
+-    static auto PSTYLE = g_pConfigManager->getValue<Hyprlang::STRING>("theme:style");
+-    if (!std::string_view{*PSTYLE}.empty())
+-        setBaseStyle(QStyleFactory::create(*PSTYLE));
+-    else
+-        setBaseStyle(QStyleFactory::create("Fusion"));
++    CHyprStyle::registerStyleInstance(this);
++    CHyprProxyStyle::reloadSettings();
+ }
+ 
+ CHyprProxyStyle::~CHyprProxyStyle() {
+     CHyprStyle::unregisterStyleInstance(this);
+ }
+ 
+-int CHyprProxyStyle::styleHint(QStyle::StyleHint hint, const QStyleOption* option, const QWidget* widget, QStyleHintReturn* returnData) const {
+-    static auto PICONS     = g_pConfigManager->getValue<Hyprlang::INT>("misc:menus_have_icons");
+-    static auto PSCA       = g_pConfigManager->getValue<Hyprlang::INT>("misc:single_click_activate");
+-    static auto PSHORTCUTS = g_pConfigManager->getValue<Hyprlang::INT>("misc:shortcuts_for_context_menus");
++void CHyprProxyStyle::reloadSettings() {
++    g_pConfigManager->refresh();
++    m_dialogButtonsHaveIcons    = !!*g_pConfigManager->getValue<Hyprlang::INT>("misc:dialog_have_icons");
++    m_activateItemOnSingleClick = !!*g_pConfigManager->getValue<Hyprlang::INT>("misc:single_click_activate");
++    m_underlineShortcut         = !!*g_pConfigManager->getValue<Hyprlang::INT>("misc:shortcuts_for_context_menus");
++    QString style               = *g_pConfigManager->getValue<Hyprlang::STRING>("theme:style");
++
++    if (style == "hypr-style"_L1 || !QStyleFactory::keys().contains(style, Qt::CaseInsensitive))
++        style = u"Fusion"_s;
++
++    if (style != m_style) {
++        setBaseStyle(QStyleFactory::create(style) ?: new QCommonStyle);
++        m_style = style;
++    }
++}
+ 
++int CHyprProxyStyle::styleHint(QStyle::StyleHint hint, const QStyleOption* option, const QWidget* widget, QStyleHintReturn* returnData) const {
+     switch (hint) {
+-        case QStyle::SH_DialogButtonBox_ButtonsHaveIcons: return *PICONS ? 1 : 0;
+-        case QStyle::SH_ItemView_ActivateItemOnSingleClick: return *PSCA ? 1 : 0;
+-        case QStyle::SH_UnderlineShortcut: return *PSHORTCUTS ? 1 : 0;
+-        default: break;
++        case QStyle::SH_DialogButtonBox_ButtonsHaveIcons: return m_dialogButtonsHaveIcons;
++        case QStyle::SH_ItemView_ActivateItemOnSingleClick: return m_activateItemOnSingleClick;
++        case QStyle::SH_UnderlineShortcut: return m_underlineShortcut;
++        default: return QProxyStyle::styleHint(hint, option, widget, returnData);
+     }
+-
+-    return QProxyStyle::styleHint(hint, option, widget, returnData);
+ }
+diff --color -uraw a/style/ProxyStyle.hpp b/style/ProxyStyle.hpp
+--- a/style/ProxyStyle.hpp	2026-10-20 02:54:05.234816052 -0300
++++ b/style/ProxyStyle.hpp	2026-10-20 02:54:25.379415987 -0300
+@@ -9,11 +9,15 @@
+   public:
+     explicit CHyprProxyStyle();
+ 
+-    void reloadSettings() override {
+-        ;
+-    }
++    void reloadSettings() override;
+ 
+     virtual ~CHyprProxyStyle();
+ 
+     int styleHint(StyleHint hint, const QStyleOption* option, const QWidget* widget, QStyleHintReturn* returnData) const override;
++
++  private:
++    QString m_style;
++    bool    m_dialogButtonsHaveIcons    = true;
++    bool    m_activateItemOnSingleClick = true;
++    bool    m_underlineShortcut         = true;
+ };
+diff --color -uraw a/style/engine.json b/style/engine.json
+--- a/style/engine.json	2026-10-20 02:54:05.234816052 -0300
++++ b/style/engine.json	2026-10-20 02:54:25.379415987 -0300
+@@ -1,3 +1,3 @@
+ {
+-    "Keys": [ "hyprqt6engine" ]
++    "Keys": [ "hypr-style" ]
+ }
+diff --color -uraw a/style/plugin.cpp b/style/plugin.cpp
+--- a/style/plugin.cpp	2026-10-20 02:54:05.234866783 -0300
++++ b/style/plugin.cpp	2026-10-20 02:54:25.379468758 -0300
+@@ -7,7 +7,7 @@
+ 
+   public:
+     QStyle* create(const QString& key) override {
+-        if (key == QLatin1String("hypr-style"))
++        if (key == "hypr-style"_L1)
+             return new CHyprProxyStyle();
+         return nullptr;
+     }

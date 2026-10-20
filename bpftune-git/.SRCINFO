@@ -20,6 +20,6 @@ pkgbase = bpftune-git
 	source = git+https://github.com/oracle/bpftune.git
 	source = build-tweaks.patch
 	sha256sums = SKIP
-	sha256sums = 806a3f909cb344ec5794419ae5ff8d47db2be24be7275d0c18651e46e2809d33
+	sha256sums = e88946b6cb7df9a4a16fe3e789d5b21abe958f39e6239e745a9b7963dcb95036
 
 pkgname = bpftune-git

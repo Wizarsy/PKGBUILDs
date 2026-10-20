@@ -7,7 +7,7 @@
 
 _pkgname=rpcs3
 pkgname=${_pkgname}-git
-pkgver=0.0.42.r20034.3fa2bf66
+pkgver=0.0.43.r20344.58317c93
 pkgrel=1
 pkgdesc='A Sony PlayStation 3 emulator'
 arch=(x86_64)
@@ -46,7 +46,7 @@ depends=(
   # zstd
 )
 optdepends=(
-  rpcs3-udev
+  steam-devices
   vulkan-validation-layers
 )
 makedepends=(
@@ -110,10 +110,10 @@ pkgver() {
 prepare() {
   cd "$_pkgname"
 
-  submodules=(3rdparty/{cubeb/cubeb,yaml-cpp/yaml-cpp,FAudio,wolfssl/wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator,fusion/fusion,feralinteractive/feralinteractive,asmjit/asmjit,protobuf/protobuf})
-  for submodule in "${submodules[@]}"; do
-    git submodule set-url "${submodule}" "${srcdir}/${submodule##*/}"
-    git -c protocol.file.allow=always submodule update --init "${submodule}"
+  _submodules=(3rdparty/{cubeb/cubeb,yaml-cpp/yaml-cpp,FAudio,wolfssl/wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator,fusion/fusion,feralinteractive/feralinteractive,asmjit/asmjit,protobuf/protobuf})
+  for _submodule in "${_submodules[@]}"; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
   done
 
   cd 3rdparty/cubeb/cubeb
@@ -128,7 +128,7 @@ build() {
 
   export CC CXX LDFLAGS
 
-  local cmake_default_flags=(
+  _cmake_default_flags=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_SKIP_RPATH=ON
     -DCMAKE_BUILD_TYPE=Release
@@ -143,7 +143,7 @@ build() {
   )
 
   cmake -S "$_pkgname" -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
+    "${_cmake_default_flags[@]}" \
     -DOpenGL_GL_PREFERENCE=GLVND \
     -DWITH_LLVM=ON \
     -DUSE_LTO=ON \

@@ -1,0 +1,39 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=pcsx2_patches
+pkgname=${_pkgname}-git
+pkgver=r666.3ef626f
+pkgrel=1
+pkgdesc='A Sony PlayStation 2 emulator (patches)'
+arch=(any)
+url=https://github.com/PCSX2/pcsx2_patches
+depends=(pcsx2)
+makedepends=(
+  7zip
+  git
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+source=("git+${url}.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+build() {
+  cd "${srcdir}/${_pkgname}"
+  7z a -r patches.zip patches/.
+}
+
+package() {
+  install -Dm644 "${srcdir}/${_pkgname}/patches.zip" \
+    "${pkgdir}/usr/share/PCSX2/resources/patches.zip"
+}

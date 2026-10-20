@@ -48,7 +48,7 @@ diff --color -ura a/sample_tuner/Makefile b/sample_tuner/Makefile
  
 diff --color -ura a/src/Makefile b/src/Makefile
 --- a/src/Makefile	2026-09-23 01:24:19.593583024 -0300
-+++ b/src/Makefile	2026-09-23 03:10:08.837346961 -0300
++++ b/src/Makefile	2026-09-25 18:12:34.184126568 -0300
 @@ -27,14 +27,14 @@
  BPFTOOL ?= bpftool
  BPF_INCLUDE := /usr/include
@@ -99,7 +99,7 @@ diff --color -ura a/src/Makefile b/src/Makefile
 -	$(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) \
 -	-gbtf -mcpu=v3 -mco-re -Wno-error=attributes \
 +GCC_BPF_FLAGS := $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) \
-+	-gbtf -mco-re -Wno-error=attributes \
++	-gbtf -mcpu=v4 -mco-re -Wno-error=attributes \
  	-Wno-error=address-of-packed-member \
  	-Wno-compare-distinct-pointer-types \
  	$(INCLUDES)
@@ -129,13 +129,13 @@ diff --color -ura a/src/bpftune.service b/src/bpftune.service
  [Install]
 diff --color -ura a/test/strategy/Makefile b/test/strategy/Makefile
 --- a/test/strategy/Makefile	2026-09-23 01:24:19.619254608 -0300
-+++ b/test/strategy/Makefile	2026-09-23 03:10:40.988059566 -0300
++++ b/test/strategy/Makefile	2026-09-25 18:16:02.317139803 -0300
 @@ -27,7 +27,7 @@
  BPFTOOL ?= bpftool
  GCC_BPF ?=
  BPF_INCLUDE := /usr/include
 -BPF_CFLAGS := -g -fno-stack-protector -Wall
-+BPF_CFLAGS := -g -O3 -fno-stack-protector -Wall
++BPF_CFLAGS := -g -O3 -fno-stack-protector -Wall -Wno-incompatible-pointer-types-discards-qualifiers
  NL_INCLUDE := /usr/include/libnl3
  INCLUDES := -I../../include -I$(BPF_INCLUDE) -I$(NL_INCLUDE) -I/usr/include/uapi
  
@@ -173,7 +173,7 @@ diff --color -ura a/test/strategy/Makefile b/test/strategy/Makefile
 -	$(BPF_CFLAGS) -std=gnu17 -D__TARGET_ARCH_$(SRCARCH) \
 -	-gbtf -mcpu=v3 -Wno-error=attributes \
 +GCC_BPF_FLAGS := $(BPF_CFLAGS) -std=gnu17 -D__TARGET_ARCH_$(SRCARCH) \
-+	-gbtf -Wno-error=attributes \
++	-gbtf -mcpu=v4 -mco-re -Wno-error=attributes \
  	-Wno-error=address-of-packed-member \
  	-Wno-compare-distinct-pointer-types \
  	$(INCLUDES)

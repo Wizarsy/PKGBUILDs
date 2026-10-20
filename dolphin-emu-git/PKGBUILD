@@ -7,7 +7,7 @@
 
 _pkgname=dolphin-emu
 pkgname=${_pkgname}-git
-pkgver=2606.r388.g233b2df
+pkgver=2609.r104.gcf5cb7e
 pkgrel=1
 pkgdesc='A Nintendo Wii and GameCube emulator'
 arch=(x86_64)
@@ -105,10 +105,10 @@ prepare() {
 
   patch -p1 < ../optional-systemd.patch
 
-  submodules=(Externals/{cubeb/cubeb,mGBA/mgba,cpp-ipc/cpp-ipc,cpp-optparse/cpp-optparse,imgui/imgui,implot/implot,tinygltf/tinygltf,rcheevos/rcheevos,watcher/watcher,VulkanMemoryAllocator})
-  for submodule in "${submodules[@]}"; do
-    git submodule set-url "${submodule}" "${srcdir}/${submodule##*/}"
-    git -c protocol.file.allow=always submodule update --init "${submodule}"
+  _submodules=(Externals/{cubeb/cubeb,mGBA/mgba,cpp-ipc/cpp-ipc,cpp-optparse/cpp-optparse,imgui/imgui,implot/implot,tinygltf/tinygltf,rcheevos/rcheevos,watcher/watcher,VulkanMemoryAllocator})
+  for _submodule in "${_submodules[@]}"; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
   done
   cd Externals/cubeb/cubeb
   git submodule set-url cmake/sanitizers-cmake "${srcdir}/sanitizers-cmake"
@@ -122,7 +122,7 @@ build() {
 
   export CC CXX LDFLAGS
 
-  local cmake_default_flags=(
+  _cmake_default_flags=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_SKIP_RPATH=ON
@@ -138,7 +138,8 @@ build() {
   )
 
   cmake -S "$_pkgname" -B build -G Ninja \
-    "${cmake_default_flags[@]}" \
+    "${_cmake_default_flags[@]}" \
+    -DQT_NO_PRIVATE_MODULE_WARNING=ON \
     -DOpenGL_GL_PREFERENCE=GLVND \
     -DUSE_SYSTEM_LIBS=ON \
     -DUSE_UPNP=ON \
