@@ -14,9 +14,7 @@ arch=(x86_64)
 url=https://github.com/RPCS3/rpcs3
 license=(GPL-2.0-only)
 depends=(
-  # cubeb
   # curl
-  # faudio
   ffmpeg
   glew
   glslang
@@ -128,7 +126,7 @@ build() {
 
   export CC CXX LDFLAGS
 
-  _cmake_default_flags=(
+  _cmake_default=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_SKIP_RPATH=ON
     -DCMAKE_BUILD_TYPE=Release
@@ -143,7 +141,7 @@ build() {
   )
 
   cmake -S "$_pkgname" -B build -G Ninja \
-    "${_cmake_default_flags[@]}" \
+    "${_cmake_default[@]}" \
     -DOpenGL_GL_PREFERENCE=GLVND \
     -DWITH_LLVM=ON \
     -DUSE_LTO=ON \

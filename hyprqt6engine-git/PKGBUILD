@@ -63,7 +63,7 @@ build() {
 
   export CC CXX LDFLAGS
 
-  _cmake_default_flags=(
+  _cmake_default=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_BUILD_TYPE=Release
@@ -80,7 +80,7 @@ build() {
   cd "$srcdir"
 
   cmake -S "$_pkgname" -B build -G Ninja \
-    "${_cmake_default_flags[@]}"
+    "${_cmake_default[@]}"
   
   cmake --build build
 }

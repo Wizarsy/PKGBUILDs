@@ -7,7 +7,7 @@
 
 _pkgname=pcsx2_patches
 pkgname=${_pkgname}-git
-pkgver=r666.3ef626f
+pkgver=r669.8e658bc
 pkgrel=1
 pkgdesc='A Sony PlayStation 2 emulator (patches)'
 arch=(any)

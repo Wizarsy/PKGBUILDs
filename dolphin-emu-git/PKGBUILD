@@ -122,7 +122,7 @@ build() {
 
   export CC CXX LDFLAGS
 
-  _cmake_default_flags=(
+  _cmake_default=(
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_SKIP_RPATH=ON
@@ -138,7 +138,7 @@ build() {
   )
 
   cmake -S "$_pkgname" -B build -G Ninja \
-    "${_cmake_default_flags[@]}" \
+    "${_cmake_default[@]}" \
     -DQT_NO_PRIVATE_MODULE_WARNING=ON \
     -DOpenGL_GL_PREFERENCE=GLVND \
     -DUSE_SYSTEM_LIBS=ON \

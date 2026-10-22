@@ -16,6 +16,7 @@ pkgbase = pcsx2-git
 	makedepends = pkgconf
 	makedepends = qt6-tools
 	makedepends = vulkan-headers
+	depends = cpuinfo
 	depends = ffmpeg
 	depends = hicolor-icon-theme
 	depends = kddockwidgets
@@ -25,6 +26,7 @@ pkgbase = pcsx2-git
 	depends = libudev.so
 	depends = libxi
 	depends = libxrandr
+	depends = libzip
 	depends = qt6-base
 	depends = qt6-declarative
 	depends = sdl3
@@ -35,7 +37,7 @@ pkgbase = pcsx2-git
 	options = !emptydirs
 	options = !lto
 	source = git+https://github.com/PCSX2/pcsx2.git
-	source = qt-plugins.patch
+	source = build-tweaks.patch
 	source = git+https://github.com/sammycage/plutovg.git#tag=v1.3.3
 	source = git+https://github.com/sammycage/plutosvg.git#tag=v0.0.8
 	source = git+https://github.com/jurplel/QtApng.git#tag=1.3.0
@@ -47,7 +49,7 @@ pkgbase = pcsx2-git
 	source = git+https://github.com/biojppm/debugbreak.git
 	source = git+https://github.com/fastfloat/fast_float.git
 	sha256sums = SKIP
-	sha256sums = a4c5380ad6cf9a563dd809ab74d2f24b4d8c7eb5adef53a718d0536a959c2ffb
+	sha256sums = ed0f09a3eac5112d3afed01ba6c0e49b5170aa10dcdfb41d4b80132146d773df
 	sha256sums = 03b09bab72cea11e56814b0821e7e046934d72ee224c10c91653fde8fb4aae31
 	sha256sums = 9a9fda98d8f6b462f744711584264cd463ac9cee8fd7a01f08e5e954f5452ef2
 	sha256sums = b69518cbf08a62496d992a76bb80c5f7b419fc0f3895880ff40bdeaef9e83218
