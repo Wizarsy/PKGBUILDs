@@ -1,0 +1,35 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=libretro-core-info
+pkgname=${_pkgname}-git
+pkgver=1.22.2.r35.geac3a27
+pkgrel=1
+pkgdesc='Retroarch core info files'
+arch=(any)
+url=https://github.com/libretro/libretro-core-info
+license=(MIT)
+# depends=(retroarch-git)
+makedepends=(
+  git
+  make
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+source=("git+${url}.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+package() {
+  make -C "$_pkgname" install \
+    DESTDIR="$pkgdir"
+}

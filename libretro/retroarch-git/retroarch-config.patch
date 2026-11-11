@@ -1,0 +1,29 @@
+diff --color -uraw a/retroarch.cfg b/retroarch.cfg
+--- a/retroarch.cfg	2026-10-23 20:01:53.232528143 -0300
++++ b/retroarch.cfg	2026-10-24 05:43:55.684603315 -0300
+@@ -863,10 +863,10 @@
+ # rgui_browser_directory =
+ 
+ # Core directory for libretro core implementations.
+-# libretro_directory =
++libretro_directory = /usr/lib/libretro
+ 
+ # Core info directory for libretro core information.
+-# libretro_info_path =
++libretro_info_path = /usr/share/libretro/info
+ 
+ # Path to content database directory.
+ # content_database_path =
+@@ -875,10 +875,10 @@
+ # cheat_database_path =
+ 
+ # Defines a directory where CPU-based video filters are kept.
+-# video_filter_dir =
++video_filter_dir = /usr/lib/retroarch/filters/video
+ 
+ # Directory where DSP plugins are kept.
+-# audio_filter_dir =
++audio_filter_dir = /usr/lib/retroarch/filters/audio
+ 
+ # Defines a directory where shaders (Cg, CGP, GLSL) are kept for easy access.
+ # video_shader_dir =

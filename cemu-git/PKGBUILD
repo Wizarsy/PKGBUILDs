@@ -1,0 +1,227 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=cemu
+pkgname=${_pkgname}-git
+pkgver=2.6.r411.gb487cb7
+pkgrel=1
+pkgdesc='Cemu - Wii U emulator'
+groups=(libretro-cores-git)
+arch=(x86_64)
+url=https://github.com/cemu-project/Cemu
+license=(MPL-2.0)
+depends=(
+  alsa-lib
+  bluez-libs
+  boost-libs
+  curl
+  fmt
+  glslang
+  hidapi
+  libusb
+  libglvnd
+  libpng
+  libx11
+  libxext
+  libxrender
+  libzip
+  libpulse
+  jack
+  openssl
+  pugixml
+  sdl3
+  speexdsp
+  zlib
+  zstd
+  zarchive
+  wayland
+  xz
+  libiconv
+  libnotify
+  pango
+  libxtst
+  libxkbcommon
+  libmspack
+  fontconfig
+  pcre2
+  gst-plugins-bad-libs
+  gstreamer
+  gvfs
+  libsm
+  libtiff
+  libjpeg-turbo
+  expat
+  libsoup3
+  gtk3
+  gdk-pixbuf2
+  gspell
+  libayatana-appindicator
+  cairo
+  nanosvg
+)
+makedepends=(
+  boost
+  clang
+  cmake
+  doxygen
+  graphviz
+  git
+  glm
+  lld
+  llvm
+  nasm
+  ninja
+  rapidjson
+  pkgconf
+  vulkan-headers
+  wayland-protocols
+  webkit2gtk-4.1
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+options=(
+  !emptydirs
+  !lto
+)
+source=(
+  "${_pkgname}::git+${url}.git"
+  git+https://github.com/ocornut/imgui.git
+  git+https://github.com/mozilla/cubeb.git
+  git+https://github.com/arsenm/sanitizers-cmake.git
+  git+https://github.com/wxWidgets/wxWidgets#tag=v3.3.4
+  git+https://github.com/wxWidgets/scintilla.git
+  git+https://github.com/wxWidgets/lexilla.git
+  build-tweaks.patch
+  system-paths.patch
+)
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            '246d2ed25d54630a1bb721b8f81bb4cfe7b8210654bf258a72b16be7eba42881'
+            'SKIP'
+            'SKIP'
+            '8feba3b2188c7df6b4950328fcc520aa188d86f779c82a974cb21582134c03bf'
+            '89818f1a552a2abae493f5db9383c4f7c584bb60aaf0eab48f43d5c263f81e71')
+
+pkgver() {
+  cd "$_pkgname"
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd "$_pkgname"
+
+  patch -p1 < ../build-tweaks.patch
+  patch -p1 < ../system-paths.patch
+
+  for _locale in ${srcdir}/${_pkgname}/bin/resources/{ar,ca,de,es,fr,he,hu,it,ja,ko,nb,nl,pl,pt,ru,sv,tr,uk,zh}; do
+    _unicode=$(printf "%s/%b%s.mo" "${_locale}" "\u200f\u200f" "${_pkgname}")
+    if [ -f "${_unicode}" ]; then
+      mv -v "${_unicode}" "${_locale}/${_pkgname}.mo"
+    fi
+  done
+
+  _submodules=(dependencies/{imgui,cubeb})
+  for _submodule in "${_submodules[@]}"; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
+  done
+
+  cd "${srcdir}/${_pkgname}/dependencies/cubeb"
+  git submodule set-url cmake/sanitizers-cmake "${srcdir}/sanitizers-cmake"
+  git -c protocol.file.allow=always submodule update --init cmake/sanitizers-cmake
+
+  cd "${srcdir}/wxWidgets"
+  
+  for _submodule in src/stc/{scintilla,lexilla}; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
+  done  
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS
+
+  _cmake_default=(
+    -Wno-author
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
+
+  cmake -S wxWidgets -B build-wxWidgets -G Ninja \
+    "${_cmake_default[@]}" \
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
+    -DCMAKE_INSTALL_PREFIX="${srcdir}/wxWidgets3.3" \
+    -DwxBUILD_TOOLKIT=gtk3 \
+    -DwxUSE_OPENGL=ON \
+    -DwxUSE_REGEX=sys \
+    -DwxUSE_ZLIB=sys \
+    -DwxUSE_EXPAT=sys \
+    -DwxUSE_LIBJPEG=sys \
+    -DwxUSE_LIBPNG=sys \
+    -DwxUSE_LIBTIFF=sys \
+    -DwxUSE_LIBLZMA=sys \
+    -DwxUSE_NANOSVG=sys \
+    -DwxUSE_LIBMSPACK=ON \
+    -DwxUSE_PRIVATE_FONTS=ON \
+    -DwxUSE_GTKPRINT=ON \
+    -DwxUSE_HOTKEY=ON \
+    -DwxBUILD_SHARED=OFF
+  cmake --build build-wxWidgets
+  cmake --install build-wxWidgets
+
+  cmake -S "$_pkgname" -B build -G Ninja \
+    "${_cmake_default[@]}" \
+    -DCMAKE_PREFIX_PATH="${srcdir}/wxWidgets3.3" \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DOpenGL_GL_PREFERENCE=GLVND \
+    -DALLOW_PORTABLE=OFF \
+    -DENABLE_VCPKG=OFF
+  
+  cmake --build build
+}
+
+package() {
+  install -Dm755 "${srcdir}/${_pkgname}/bin/Cemu_release" \
+    "${pkgdir}/usr/bin/${_pkgname}"
+
+  install -Dm644 -t "${pkgdir}/usr/share/applications/" \
+    "${srcdir}/${_pkgname}/dist/linux/info.cemu.Cemu.desktop"
+
+  install -Dm644 -t "${pkgdir}/usr/share/icons/hicolor/128x128/apps" \
+    "${srcdir}/${_pkgname}/dist/linux/info.cemu.Cemu.png"
+
+  install -Dm644 -t "${pkgdir}/usr/share/metainfo/" \
+    "${srcdir}/${_pkgname}/dist/linux/info.cemu.Cemu.metainfo.xml"
+
+  install -Dm644 -t "${pkgdir}/usr/share/Cemu/gameProfiles/default" \
+    "${srcdir}/${_pkgname}/bin/gameProfiles/default"/*
+
+  install -Dm644 -t "${pkgdir}/usr/share/Cemu/resources/sharedFonts" \
+    "${srcdir}/${_pkgname}/bin/resources/sharedFonts"/*
+
+  for _locale in ${srcdir}/${_pkgname}/bin/resources/{ar,ca,de,es,fr,he,hu,it,ja,ko,nb,nl,pl,pt,ru,sv,tr,uk,zh}; do
+    install -Dm644 "${_locale}/${_pkgname}.mo" \
+      "${pkgdir}/usr/share/locale/${_locale##*/}/LC_MESSAGES/${_pkgname}.mo"
+  done
+  
+  install -Dm644 -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/LICENSE.txt"
+}

@@ -1,0 +1,21 @@
+pkgbase = libretro-swanstation-git
+	pkgdesc = SwanStation is a hard fork and open-source Libretro core implementation of DuckStation (libretro-core)
+	pkgver = r6201.631f0fb3
+	pkgrel = 1
+	url = https://github.com/libretro/swanstation
+	arch = x86_64
+	groups = libretro-cores-git
+	license = GPL-3.0-only
+	makedepends = clang
+	makedepends = git
+	makedepends = lld
+	makedepends = llvm
+	makedepends = make
+	provides = libretro-swanstation
+	provides = libretro-core
+	conflicts = libretro-swanstation
+	options = lto
+	source = libretro-swanstation::git+https://github.com/libretro/swanstation.git
+	sha256sums = SKIP
+
+pkgname = libretro-swanstation-git

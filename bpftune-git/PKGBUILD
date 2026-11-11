@@ -24,18 +24,20 @@ makedepends=(
   git
   lld
   llvm
-  pkgconf
+  linux-headers
+  make
   python-docutils
+  rpm-tools
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")
-options=()
+options=(lto)
 source=(
   "git+${url}.git"
   build-tweaks.patch
 )
 sha256sums=('SKIP'
-            'e88946b6cb7df9a4a16fe3e789d5b21abe958f39e6239e745a9b7963dcb95036')
+            '1817b5b5580c748c8dfad448489afe1f325f02e194ccbc5c32eaed1d6b1e39c8')
 
 pkgver() {
     cd "$_pkgname"
@@ -50,24 +52,22 @@ prepare() {
 }
 
 build() {
-  cd "$_pkgname"
-
   CC=clang
-  LDFLAGS="${LDFLAGS} -fuse-ld=lld -Wl,--undefined-version"
-  CFLAGS="${CFLAGS} -w"
+  LDFLAGS="${LDFLAGS} -Wl,--undefined-version -fuse-ld=lld"
 
-  export CC CFLAGS LDFLAGS
+  export CC LDFLAGS
 
-  make libdir=lib
+  make -C "$_pkgname" \
+    libdir=lib \
+    SBINPATH=/usr/bin
 }
 
 package() {
-  cd "$_pkgname"
-
-  make install \
+  make -C "$_pkgname" install \
     DESTDIR="$pkgdir" \
-    libdir=lib
-  install -Dm644 LICENSE.txt \
-    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE.txt"
-  rm -rf "${pkgdir}/var/lib/systemd"
+    libdir=lib \
+    SBINPATH=/usr/bin
+
+  install -Dm644 -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/LICENSE.txt"
 }

@@ -1,0 +1,20 @@
+diff --color -uraw a/src/gui/wxgui/CemuApp.cpp c/src/gui/wxgui/CemuApp.cpp
+--- a/src/gui/wxgui/CemuApp.cpp	2026-11-10 03:46:05.862883056 -0300
++++ c/src/gui/wxgui/CemuApp.cpp	2026-11-11 10:37:47.101579875 -0300
+@@ -151,6 +151,7 @@
+ #endif
+ 	{
+ 		SetAppName("Cemu");
++    standardPaths.SetInstallPrefix("/usr");
+ 		wxString appName = GetAppName();
+ 		standardPaths.SetFileLayout(wxStandardPaths::FileLayout::FileLayout_XDG);
+ 		auto getEnvDir = [&](const wxString& varName, const wxString& defaultValue)
+@@ -536,7 +537,7 @@
+ 
+ std::vector<const wxLanguageInfo*> CemuApp::GetAvailableTranslationLanguages(wxTranslations* translationsMgr)
+ {
+-	wxFileTranslationsLoader::AddCatalogLookupPathPrefix(wxHelper::FromPath(ActiveSettings::GetDataPath("resources")));
++	wxFileTranslationsLoader::AddCatalogLookupPathPrefix(wxString{"/usr/share/locale"});
+ 	std::vector<const wxLanguageInfo*> languages;
+ 	for (const auto& langName : translationsMgr->GetAvailableTranslations("cemu"))
+ 	{

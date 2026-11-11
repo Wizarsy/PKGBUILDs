@@ -7,7 +7,7 @@
 
 _pkgname=pcsx2
 pkgname=${_pkgname}-git
-pkgver=2.9.131.r0.g5b6e6e2
+pkgver=2.9.160.r0.ga6dc70b
 pkgrel=1
 pkgdesc='A Sony PlayStation 2 emulator'
 arch=(x86_64)
@@ -24,13 +24,13 @@ depends=(
   # libpng
   # libwebp
   # libdbus-1.so
-  libgl
   libpcap
   libudev.so
   libxi
   libxrandr
   libzip
   # lz4
+  opengl-driver
   qt6-base
   qt6-declarative
   sdl3
@@ -74,7 +74,7 @@ source=(
   git+https://github.com/fastfloat/fast_float.git
 )
 sha256sums=('SKIP'
-            'ed0f09a3eac5112d3afed01ba6c0e49b5170aa10dcdfb41d4b80132146d773df'
+            '1c7595f3847417edd3881c221199852b832fda2661e4552961095600d42b6833'
             '03b09bab72cea11e56814b0821e7e046934d72ee224c10c91653fde8fb4aae31'
             '9a9fda98d8f6b462f744711584264cd463ac9cee8fd7a01f08e5e954f5452ef2'
             'b69518cbf08a62496d992a76bb80c5f7b419fc0f3895880ff40bdeaef9e83218'
@@ -85,6 +85,12 @@ sha256sums=('SKIP'
             'SKIP'
             'SKIP'
             'SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
 
 prepare() {
   cd "$_pkgname"
@@ -118,6 +124,7 @@ build() {
   _external_deps="${srcdir}/deps"
 
   _cmake_default=(
+    -Wno-author
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_BUILD_TYPE=Release
@@ -132,7 +139,7 @@ build() {
   cmake -B build -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_C_COMPILER="${CC}" \
-    -DCMAKE_C_FLAGS="${CFLAGS}" \
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=ON \
     -DPNG_SHARED=ON \
@@ -146,7 +153,7 @@ build() {
   cmake -B build -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX="${_external_deps}"
   cmake --build build
   cmake --install build
@@ -155,7 +162,7 @@ build() {
   cmake -B build -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_C_COMPILER="${CC}" \
-    -DCMAKE_C_FLAGS="${CFLAGS}" \
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=OFF \
     -DPLUTOVG_BUILD_EXAMPLES=OFF 
@@ -166,7 +173,7 @@ build() {
   cmake -B build -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_C_COMPILER="${CC}" \
-    -DCMAKE_C_FLAGS="${CFLAGS}" \
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=OFF \
     -DPLUTOSVG_ENABLE_FREETYPE=OFF \
@@ -178,30 +185,31 @@ build() {
   cmake -B build -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=OFF
   cmake --build build
   cmake --install build
 
   cd "$srcdir"
+
   cmake -S "$_pkgname" -B build -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_C_COMPILER="${CC}" \
-    -DCMAKE_C_FLAGS="${CFLAGS}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
-    -DQT_NO_PRIVATE_MODULE_WARNING=ON \
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG" \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DOpenGL_GL_PREFERENCE=GLVND \
-    -DDISABLE_ADVANCE_SIMD=ON \
-    -DUSE_LINKED_FFMPEG=ON \
+    -DQT_NO_PRIVATE_MODULE_WARNING=ON \
     -DENABLE_QT_UI=ON \
     -DPACKAGE_MODE=ON \
+    -DUSE_LINKED_FFMPEG=ON \
     -DUSE_VTUNE=OFF \
     -DENABLE_TESTS=OFF \
+    -DENABLE_SETCAP=OFF \
     -DENABLE_GSRUNNER=OFF \
-    -DENABLE_SETCAP=OFF
+    -DDISABLE_ADVANCE_SIMD=OFF
   
   cmake --build build
 }
@@ -215,16 +223,14 @@ package() {
   install -Dm644 "${pkgdir}/usr/share/PCSX2/resources/icons/AppIconLarge.png" \
     "${pkgdir}/usr/share/icons/hicolor/512x512/apps/PCSX2.png"
    
-  install -Dm644 "${srcdir}/deps/lib/libpng16.so.16" \
-    "${pkgdir}/usr/lib/PCSX2/libpng16.so.16"
+  install -Dm644 -t "${pkgdir}/usr/lib/PCSX2/" \
+    "${srcdir}/deps/lib/libpng16.so.16"
 
-  install -Dm755 -d "${pkgdir}/usr/lib/PCSX2/plugins/imageformats"
+  install -Dm644 -t "${pkgdir}/usr/lib/PCSX2/plugins/imageformats/" \
+    "${srcdir}/deps/plugins/imageformats/"*
 
-  install -Dm644 "${srcdir}/deps/plugins/imageformats/"* \
-    "${pkgdir}/usr/lib/PCSX2/plugins/imageformats"
-
-  install -Dm644 "${srcdir}/${_pkgname}/COPYING.GPLv3" \
-    "${pkgdir}/usr/share/licenses/PCSX2/COPYING.GPLv3"
+  install -Dm644 -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/COPYING.GPLv3"    
 
   cd "${srcdir}/${_pkgname}"
   install -Dm755 -d "${pkgdir}/usr/share/metainfo"

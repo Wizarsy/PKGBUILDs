@@ -1,0 +1,289 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=azahar
+pkgname=${_pkgname}-git
+pkgver=2127.0.rc2.r0.g6b4e7f2
+pkgrel=1
+pkgdesc='An open-source 3DS emulator project based on Citra'
+groups=(libretro-cores-git)
+arch=(x86_64)
+url=https://github.com/azahar-emu/azahar
+license=(GPL-2.0-or-later)
+depends=(
+  alsa-lib
+  boost-libs
+  crypto++
+  enet
+  faad2
+  fmt
+  libusb
+  libiconv
+  libpulse
+  libglvnd
+  libpipewire
+  libx11
+  libxext
+  libxkbcommon
+  jack
+  glslang
+  hicolor-icon-theme
+  openal
+  openssl
+  qt6-base
+  qt6-multimedia
+  qt6-multimedia-ffmpeg
+  sdl2
+  soundtouch
+  spirv-tools
+  xxhash
+  zlib
+  zstd
+  dav1d
+  aom
+  opus
+  snappy
+  lame
+  libvorbis
+  libvpx
+  libtheora
+  libsoxr
+  x264
+  x265
+)
+makedepends=(
+  boost
+  clang
+  cmake
+  doxygen
+  git
+  graphviz
+  libinih
+  lld
+  llvm
+  ninja
+  nlohmann-json
+  pkgconf
+  qt6-tools
+  rapidjson
+  shaderc
+  spirv-headers
+  vulkan-icd-loader
+  vulkan-headers
+  nasm
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+options=(
+  !emptydirs
+  !lto
+)
+source=(
+  "${_pkgname}::git+${url}.git"
+  vma::git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+  git+https://github.com/azahar-emu/compatibility-list.git
+  git+https://github.com/azahar-emu/openal-soft.git
+  git+https://github.com/arun11299/cpp-jwt.git
+  git+https://github.com/mozilla/cubeb.git
+  git+https://github.com/arsenm/sanitizers-cmake.git
+  git+https://github.com/azahar-emu/discord-rpc.git
+  git+https://github.com/wwylele/teakra.git
+  git+https://github.com/herumi/xbyak.git
+  git+https://github.com/lvandeve/lodepng.git
+  git+https://github.com/azahar-emu/sirit.git
+  git+https://github.com/facebook/zstd.git
+  git+https://github.com/septag/dds-ktx.git
+  git+https://github.com/neobrain/nihstro.git
+  git+https://github.com/azahar-emu/dynarmic.git
+  git+https://github.com/azahar-emu/mcl.git
+  git+https://github.com/Tessil/robin-map.git
+  git+https://github.com/zyantific/zydis.git
+  git+https://github.com/azahar-emu/microtar.git
+  zycore::git+https://github.com/zyantific/zycore-c.git
+  git+https://git.ffmpeg.org/ffmpeg.git#tag=3a0867c2bfda4a4d4309ca1a8cbdc6175e67f587
+  build-tweaks.patch
+)
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'fc35344b0123807409a8cedaed5b1d74df43bd1732e2e4af4b3639b5acdf959e'
+            'b1ba99227b0fdcd9014e46ac6293bf35205cf040139ea7b7ee37f803a746eb77')
+
+pkgver() {
+  cd "$_pkgname"
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd "$_pkgname"
+
+  patch -p1 < ../build-tweaks.patch
+
+  _submodules=(externals/{vma,teakra,dynarmic,xbyak,microtar,zstd,dds-ktx,nihstro,cubeb,discord-rpc,openal-soft,cpp-jwt,lodepng/lodepng,sirit/sirit})
+  for _submodule in "${_submodules[@]}"; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
+  done
+
+  git submodule set-url dist/compatibility_list "${srcdir}/compatibility-list"
+  git -c protocol.file.allow=always submodule update --init dist/compatibility_list
+
+  cd "${srcdir}/${_pkgname}/externals/dynarmic"
+
+  for _submodule in externals/{mcl,robin-map,zydis,zycore}; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
+  done
+
+  cd "${srcdir}/${_pkgname}/externals/cubeb"
+  git submodule set-url cmake/sanitizers-cmake "${srcdir}/sanitizers-cmake"
+  git -c protocol.file.allow=always submodule update --init cmake/sanitizers-cmake
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -lsnappy -laom -ldav1d -lmp3lame -lopus -lx264 -lx265 -lvpx -lsoxr -lvorbis -lvorbisenc -ltheora -ltheoraenc -ltheoradec -fuse-ld=lld"
+
+  export CC CXX LDFLAGS
+
+  mkdir -p "${srcdir}/ffmpeg7.1.5"
+
+  cd "${srcdir}/ffmpeg"
+
+# https://github.com/azahar-emu/azahar/blob/6b4e7f2e694514fdf2f72dc20368609b7cd4912e/.github/workflows/build.yml#L259
+  ./configure \
+    --prefix=/ffmpeg7.1.5 \
+    --arch=x86_64 \
+    --target-os=linux \
+    --cc="${CC}" \
+    --cxx="${CXX}" \
+    --nm=llvm-nm \
+    --ar=llvm-ar \
+    --as=llvm-as \
+    --strip=llvm-strip \
+    --ranlib=llvm-ranlib \
+    --disable-doc \
+    --disable-debug \
+    --disable-shared \
+    --disable-swscale \
+    --disable-avdevice \
+    --disable-postproc \
+    --disable-programs \
+    --disable-stripping \
+    --disable-autodetect \
+    --enable-gpl \
+    --enable-version3 \
+    --enable-vulkan \
+    --enable-opengl \
+    --enable-static \
+    --enable-pic \
+    --enable-lto \
+    --enable-pthreads \
+    --enable-avcodec \
+    --enable-avfilter \
+    --enable-avformat \
+    --enable-swresample \
+    --enable-libaom \
+    --enable-libdav1d \
+    --enable-libmp3lame \
+    --enable-libopus \
+    --enable-libsnappy \
+    --enable-libsoxr \
+    --enable-libtheora \
+    --enable-libvorbis \
+    --enable-libvpx \
+    --enable-libx264 \
+    --enable-libx265
+  
+  make
+  make DESTDIR="$srcdir" install
+  
+  cd "$srcdir"
+
+  _cmake_default=(
+    -Wno-author
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    -DCMAKE_SKIP_RPATH=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_PREFIX_PATH="${srcdir}/ffmpeg7.1.5"
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
+
+  _sse42=ON
+
+  if [ -z "$PACKAGECARCH" ] || ! [[ "$PACKAGECARCH" =~ x86_64_v[2-4] ]]; then
+    _sse42=OFF
+  fi
+
+  cmake -S "$_pkgname" -B build -G Ninja \
+    "${_cmake_default[@]}" \
+    -DOpenGL_GL_PREFERENCE=GLVND \
+    -DENABLE_SSE42="${_sse42}" \
+    -DENABLE_CUBEB=ON \
+    -DENABLE_FFMPEG=ON \
+    -DENABLE_DISCORD_RPC=ON \
+    -DUSE_SYSTEM_LIBS=ON \
+    -DUSE_SYSTEM_FAAD=ON \
+    -DUSE_SYSTEM_XXHASH=ON \
+    -DUSE_SYSTEM_SPIRV_TOOLS=ON \
+    -DDISABLE_SYSTEM_VMA=ON \
+    -DDISABLE_SYSTEM_ZSTD=ON \
+    -DDISABLE_SYSTEM_XBYAK=ON \
+    -DDISABLE_SYSTEM_CUBEB=ON \
+    -DDISABLE_SYSTEM_LODEPNG=ON \
+    -DDISABLE_SYSTEM_CPP_JWT=ON \
+    -DDISABLE_SYSTEM_DYNARMIC=ON \
+    -DDISABLE_SYSTEM_CPP_HTTPLIB=ON \
+    -DDISABLE_SYSTEM_FFMPEG_HEADERS=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_mcl=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_tsl-robin-map=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_Zydis=ON \
+    -DENABLE_LTO=OFF \
+    -DENABLE_TESTS=OFF \
+    -DENABLE_ROOM_STANDALONE=OFF \
+    -DENABLE_NATIVE_OPTIMIZATION=OFF \
+    -DCITRA_USE_PRECOMPILED_HEADERS=OFF
+  
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  
+  install -Dm644 -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/LICENSE.txt"
+
+  rm -rf "${pkgdir}/usr/lib"
+}

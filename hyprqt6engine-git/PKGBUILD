@@ -34,9 +34,7 @@ makedepends=(
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")
-options=(
-  !lto
-)
+options=(!lto)
 source=(
   "git+${url}.git"
   wizarsy-fix.patch
@@ -64,20 +62,20 @@ build() {
   export CC CXX LDFLAGS
 
   _cmake_default=(
+    -Wno-author
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    -DCMAKE_SKIP_RPATH=ON
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_PREFIX=/usr
     -DCMAKE_C_COMPILER="${CC}"
     -DCMAKE_CXX_COMPILER="${CXX}"
-    -DCMAKE_C_FLAGS="${CFLAGS}"
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
     -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
   )
-
-  cd "$srcdir"
 
   cmake -S "$_pkgname" -B build -G Ninja \
     "${_cmake_default[@]}"
@@ -88,6 +86,6 @@ build() {
 package() {
   DESTDIR="$pkgdir" cmake --install build
 
-  install -Dm644 "${srcdir}/${_pkgname}/LICENSE" \
-    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/LICENSE"
 }

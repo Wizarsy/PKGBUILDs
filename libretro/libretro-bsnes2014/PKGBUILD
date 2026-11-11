@@ -1,0 +1,102 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=libretro-bsnes2014
+pkgbase=${_pkgname}-accuracy-git
+pkgname=(
+  "${_pkgname}-accuracy-git"
+  "${_pkgname}-balanced-git"
+  "${_pkgname}-performance-git"
+)
+pkgver=r590.3c1394e0
+pkgrel=1
+pkgdesc='Libretro fork of bsnes, as close to upstream as possible (libretro-core)'
+groups=(libretro-cores-git)
+arch=(x86_64)
+url=https://github.com/libretro/bsnes2014
+license=(GPL-3.0-or-later)
+# depends=(retroarch-git)
+makedepends=(
+  clang
+  git
+  lld
+  llvm
+  make
+  pkgconf
+)
+provides=(libretro-core)
+options=(lto)
+source=(
+  "${_pkgname}::git+${url}.git"
+)
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd "$_pkgname"
+
+  sed -i "s/^CFLAGS :=$/CFLAGS ?=/" Makefile
+  sed -i "s/^CXXFLAGS :=$/CXXFLAGS ?=/" Makefile
+}
+
+build() {
+  cd "$_pkgname"
+
+  CC=clang
+  CXX=clang++
+  AR="llvm-ar"
+  RANLIB="llvm-ranlib"
+  STRIP="llvm-strip"
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS AR RANLIB STRIP
+
+  make \
+  compiler="${CXX}" \
+  PROFILE=accuracy
+
+  find "${srcdir}/${_pkgname}" -type f -name "*.o" -exec rm -f {} \;
+
+  make \
+  compiler="${CXX}" \
+  PROFILE=balanced
+  
+  find "${srcdir}/${_pkgname}" -type f -name "*.o" -exec rm -f {} \;
+
+  make \
+    compiler="${CXX}" \
+    PROFILE=performance
+}
+
+package_libretro-bsnes2014-accuracy-git() {
+  provides+=("${_pkgname}-accuracy")
+  conflicts=("${_pkgname}-accuracy")
+
+  install -v -Dm644 -t "${pkgdir}/usr/lib/libretro/" \
+    "${srcdir}/${_pkgname}/bsnes2014_accuracy_libretro.so"
+}
+
+package_libretro-bsnes2014-balanced-git() {
+  provides+=("${_pkgname}-balanced")
+  conflicts=("${_pkgname}-balanced")
+
+  install -v -Dm644 -t "${pkgdir}/usr/lib/libretro/" \
+    "${srcdir}/${_pkgname}/bsnes2014_balanced_libretro.so"
+}
+
+package_libretro-bsnes2014-performance-git() {
+  provides+=("${_pkgname}-performance")
+  conflicts=("${_pkgname}-performance")
+
+  install -v -Dm644 -t "${pkgdir}/usr/lib/libretro/" \
+    "${srcdir}/${_pkgname}/bsnes2014_performance_libretro.so"
+}

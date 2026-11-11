@@ -7,32 +7,38 @@
 
 _pkgname=dolphin-emu
 pkgname=${_pkgname}-git
-pkgver=2609.r104.gcf5cb7e
+pkgver=2609.r193.g257a6d0
 pkgrel=1
 pkgdesc='A Nintendo Wii and GameCube emulator'
 arch=(x86_64)
 url=https://github.com/dolphin-emu/dolphin
 license=(GPL-2.0-or-later)
 depends=(
+  alsa-lib
   bluez-libs
-  # bzip2
-  # cubeb
-  # curl
+  bzip2
+  curl
   enet
   ffmpeg
   fmt
   glslang
-  gettext
   hicolor-icon-theme
-  # hidapi
+  hidapi
   libevdev
-  # libusb
+  libedit
   libiconv
-  libgl
   libudev.so
+  libusb
+  libglvnd
   libspng
+  libx11
+  libxkbcommon
+  libxrandr
+  libxi
+  libxml2
+  libpulse
   llvm
-  # lz4
+  lz4
   lzo
   minizip-ng
   miniupnpc
@@ -41,17 +47,17 @@ depends=(
   qt6-svg
   sdl3
   sfml
-  # vulkan-memory-allocator
+  speexdsp
   xxhash
-  # xz
+  xz
   zlib-ng
-  # zstd  
+  zstd
 )
 makedepends=(
   clang
   cmake
   git
-  libglvnd
+  gettext
   linux-headers
   lld
   ninja
@@ -67,9 +73,7 @@ provides=("$_pkgname")
 conflicts=("$_pkgname")
 source=(
   "${_pkgname}::git+${url}.git"
-  optional-systemd.patch
   git+https://github.com/mgba-emu/mgba.git
-  git+https://github.com/mozilla/cubeb.git
   git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
   git+https://github.com/RetroAchievements/rcheevos.git
   git+https://github.com/ocornut/imgui.git
@@ -78,10 +82,10 @@ source=(
   git+https://github.com/e-dant/watcher.git
   git+https://github.com/mutouyun/cpp-ipc.git
   git+https://github.com/weisslj/cpp-optparse.git
+  git+https://github.com/mozilla/cubeb.git
   git+https://github.com/arsenm/sanitizers-cmake.git
 )
 sha256sums=('SKIP'
-            'a67e10c2c3bafa5d078d7cc2ee2c0311c073496aaf181149fe9139b36b4f12b1'
             'SKIP'
             'SKIP'
             'SKIP'
@@ -97,13 +101,11 @@ sha256sums=('SKIP'
 pkgver() {
   cd "$_pkgname"
 
-  git describe --long --tags --abbrev=7 | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {
   cd "$_pkgname"
-
-  patch -p1 < ../optional-systemd.patch
 
   _submodules=(Externals/{cubeb/cubeb,mGBA/mgba,cpp-ipc/cpp-ipc,cpp-optparse/cpp-optparse,imgui/imgui,implot/implot,tinygltf/tinygltf,rcheevos/rcheevos,watcher/watcher,VulkanMemoryAllocator})
   for _submodule in "${_submodules[@]}"; do
@@ -123,6 +125,7 @@ build() {
   export CC CXX LDFLAGS
 
   _cmake_default=(
+    -Wno-author
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_SKIP_RPATH=ON
@@ -130,8 +133,8 @@ build() {
     -DCMAKE_INSTALL_PREFIX=/usr
     -DCMAKE_C_COMPILER="${CC}"
     -DCMAKE_CXX_COMPILER="${CXX}"
-    -DCMAKE_C_FLAGS="${CFLAGS}"
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
     -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
@@ -139,44 +142,23 @@ build() {
 
   cmake -S "$_pkgname" -B build -G Ninja \
     "${_cmake_default[@]}" \
-    -DQT_NO_PRIVATE_MODULE_WARNING=ON \
     -DOpenGL_GL_PREFERENCE=GLVND \
+    -DQT_NO_PRIVATE_MODULE_WARNING=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_SYSTEMD=ON \
     -DUSE_SYSTEM_LIBS=ON \
-    -DUSE_UPNP=ON \
-    -DUSE_MGBA=ON \
-    -DUSE_DISCORD_PRESENCE=ON \
-    -DUSE_RETRO_ACHIEVEMENTS=ON \
-    -DENCODE_FRAMEDUMPS=ON \
-    -DENABLE_X11=ON \
-    -DENABLE_EGL=ON \
-    -DENABLE_CLI_TOOL=ON \
-    -DENABLE_QT=ON \
-    -DENABLE_LTO=ON \
-    -DENABLE_ALSA=ON \
-    -DENABLE_PULSEAUDIO=ON \
-    -DENABLE_CUBEB=ON \
-    -DENABLE_LLVM=ON \
-    -DENABLE_VULKAN=ON \
-    -DENABLE_SDL=ON \
-    -DENABLE_HWDB=ON \
-    -DENABLE_EVDEV=ON \
-    -DENABLE_NOGUI=OFF \
-    -DENABLE_GENERIC=OFF \
-    -DENABLE_HEADLESS=OFF \
     -DENABLE_TESTS=OFF \
-    -DENABLE_CCACHE=OFF \
     -DENABLE_AUTOUPDATE=OFF \
     -DENABLE_ANALYTICS=OFF \
-    -DENABLE_SYSTEMD=OFF \
-    -DUSE_SYSTEM_LIBMGBA=OFF \
     -DUSE_SYSTEM_CUBEB=OFF \
-    -DUSE_SYSTEM_MBEDTLS=OFF
+    -DUSE_SYSTEM_MBEDTLS=OFF \
+    -DUSE_SYSTEM_LIBMGBA=OFF
   
   cmake --build build
 }
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
-  install -Dm644 "${_pkgname}/COPYING" \
-    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING"
+
+  install -v -Dm644 -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/COPYING"
 }

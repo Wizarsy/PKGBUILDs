@@ -1,0 +1,14 @@
+diff --color -uraw a/rpcs3/rpcs3qt/main_window.cpp b/rpcs3/rpcs3qt/main_window.cpp
+--- a/rpcs3/rpcs3qt/main_window.cpp	2026-10-22 07:20:04.414327068 -0300
++++ b/rpcs3/rpcs3qt/main_window.cpp	2026-10-22 07:29:05.392592052 -0300
+@@ -100,10 +100,6 @@
+ #include "raw_mouse_settings_dialog.h"
+ #endif
+ 
+-#if defined(__linux__) || defined(__APPLE__) || (defined(_WIN32) && defined(ARCH_X64))
+-#define RPCS3_UPDATE_SUPPORTED
+-#endif
+-
+ LOG_CHANNEL(gui_log, "GUI");
+ 
+ // Holds the menu text of a recent boot action without the ampersand escaping applied to text()

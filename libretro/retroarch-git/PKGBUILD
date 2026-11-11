@@ -1,0 +1,169 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=retroarch
+pkgname=${_pkgname}-git
+pkgver=1.22.2.r10864.gab6a34d
+pkgrel=1
+pkgdesc='Cross-platform, sophisticated frontend for the libretro API'
+arch=(x86_64)
+url=https://github.com/libretro/RetroArch
+license=(GPL-3.0-only)
+depends=(
+  alsa-lib
+  ffmpeg
+  freetype2
+  fontconfig
+  libdrm
+  glslang
+  hicolor-icon-theme
+  libglvnd
+  jack
+  libpipewire
+  libpulse
+  libdbus
+  libusb
+  # libretro-core-info-git
+  libudev.so
+  libv4l
+  libx11
+  libxi
+  libxext
+  libxxf86vm
+  libxinerama
+  libxrandr
+  libxcb
+  libxkbcommon
+  libxss
+  mbedtls
+  mesa
+  nvidia-cg-toolkit
+  openal
+  openssl
+  qt6-base
+  sdl3
+  spirv-cross
+  spirv-tools
+  vulkan-icd-loader
+  wayland
+  zlib
+)
+optdepends=(
+  python
+  libdecor
+)
+makedepends=(
+  clang
+  check
+  git
+  libdecor
+  linux-headers
+  lld
+  llvm
+  make
+  pkgconf
+  vulkan-headers
+  vulkan-validation-layers
+  wayland-protocols
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+options=(
+  !emptydirs
+  lto
+)
+source=(
+  "${_pkgname}::git+${url}.git"
+  retroarch-config.patch
+)
+sha256sums=('SKIP'
+            'af0cfd19b7ea3eb594be0c6a2d395239ce0b2e13a062bfd72901a64d82f3b0e1')
+
+pkgver() {
+  cd "$_pkgname"
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd "$_pkgname"
+  
+  patch -p1 < ../retroarch-config.patch
+
+  sed -i "s/-O2/-O3/" gfx/video_filters/Makefile
+  sed -i "s/-O2/-O3/" libretro-common/audio/dsp_filters/Makefile
+}
+
+build() {
+  cd "$_pkgname"
+
+  CC=clang
+  CXX=clang++
+  CFLAGS="${CFLAGS} -DNDEBUG"
+  CXXFLAGS="${CXXFLAGS} -DNDEBUG"
+  AR="llvm-ar"
+  RANLIB="llvm-ranlib"
+  STRIP="llvm-strip"
+  LDFLAGS="${LDFLAGS} -Wl,--undefined-version -fuse-ld=lld"
+
+  export CC CXX CFLAGS CXXFLAGS LDFLAGS AR RANLIB STRIP
+
+  ./configure \
+    --prefix=/usr \
+    --enable-sse \
+    --enable-mbedtls \
+    --enable-dbus \
+    --enable-hid \
+    --enable-zlib \
+    --enable-al \
+    --enable-imageviewer \
+    --enable-webmplayer \
+    --enable-glslang \
+    --enable-spirv_cross \
+    --enable-sdl3 \
+    --disable-systemd \
+    --disable-sixel \
+    --disable-sdl \
+    --disable-sdl2 \
+    --disable-update_cores \
+    --disable-update_core_info \
+    --disable-core_info_cache \
+    --disable-oss \
+    --disable-audioio \
+    --disable-dsound \
+    --disable-rsound \
+    --disable-roar \
+    --disable-xaudio \
+    --disable-wasapi \
+    --disable-asio \
+    --disable-wdmks \
+    --disable-winmm \
+    --disable-dinput \
+    --disable-vg \
+    --disable-d3d9
+
+  make
+  make -C libretro-common/audio/dsp_filters \
+    compiler="${CC}"
+  make -C gfx/video_filters \
+    compiler="${CC}"
+}
+
+package() {
+  make -C "$_pkgname" install \
+    DESTDIR="$pkgdir"
+ 
+  make -C "${_pkgname}/libretro-common/audio/dsp_filters" install \
+    DESTDIR="$pkgdir"
+ 
+  make -C "${_pkgname}/gfx/video_filters" install \
+    DESTDIR="$pkgdir"
+
+  install -Dm755 -d "${pkgdir}/usr/share/licenses/${pkgname}/"
+  ln -s "/usr/share/doc/${_pkgname}/COPYING" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/COPYING"
+}

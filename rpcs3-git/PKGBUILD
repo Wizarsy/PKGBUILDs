@@ -7,28 +7,36 @@
 
 _pkgname=rpcs3
 pkgname=${_pkgname}-git
-pkgver=0.0.43.r20344.58317c93
+pkgver=0.0.43.r20572.e61d5eaf
 pkgrel=1
 pkgdesc='A Sony PlayStation 3 emulator'
 arch=(x86_64)
 url=https://github.com/RPCS3/rpcs3
 license=(GPL-2.0-only)
 depends=(
-  # curl
+  alsa-lib
+  curl
   ffmpeg
   glew
   glslang
   hicolor-icon-theme
-  # hidapi
+  hidapi
   libevdev
-  # libpng
+  libpng
   libudev.so
-  # libusb
-  libgl
+  libglvnd
+  libffi
+  libedit
+  libxml2
+  libx11
+  libxext
+  libxkbcommon
+  libusb
+  libpulse
+  jack
   llvm
   miniupnpc
   openal
-  opencv
   pugixml
   protobuf
   qt6-base
@@ -37,11 +45,10 @@ depends=(
   qt6-svg
   rtmidi
   sdl3
-  # vulkan-icd-loader
-  # vulkan-memory-allocator
-  # wolfssl
-  # zlib
-  # zstd
+  vulkan-icd-loader
+  wayland
+  zlib
+  zstd
 )
 optdepends=(
   steam-devices
@@ -51,23 +58,23 @@ makedepends=(
   clang
   doxygen
   cmake
-  ninja
   git
-  libglvnd
+  graphviz
   lld
+  ninja
   pkgconf
-  python
   vulkan-headers
+  vulkan-validation-layers
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")
 options=(
   !emptydirs
   !lto
-  !strip
 )
 source=(
   "git+${url}.git"
+  remove-autoupdate.patch
   git+https://github.com/RPCS3/soundtouch.git
   git+https://github.com/RPCS3/yaml-cpp.git
   git+https://github.com/ip7z/7zip.git
@@ -84,6 +91,7 @@ source=(
   fusion::git+https://github.com/xioTechnologies/Fusion.git
 )
 sha256sums=('SKIP'
+            'c06392737f4329b6dab7ab4092cdfe3a73b89e70a1b4336301747464087c29fa'
             'SKIP'
             'SKIP'
             'SKIP'
@@ -108,6 +116,8 @@ pkgver() {
 prepare() {
   cd "$_pkgname"
 
+  patch -p1 < ../remove-autoupdate.patch
+
   _submodules=(3rdparty/{cubeb/cubeb,yaml-cpp/yaml-cpp,FAudio,wolfssl/wolfssl,SoundTouch/soundtouch,7zip/7zip,stblib/stb,discord-rpc/discord-rpc,GPUOpen/VulkanMemoryAllocator,fusion/fusion,feralinteractive/feralinteractive,asmjit/asmjit,protobuf/protobuf})
   for _submodule in "${_submodules[@]}"; do
     git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
@@ -127,14 +137,15 @@ build() {
   export CC CXX LDFLAGS
 
   _cmake_default=(
+    -Wno-author
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_SKIP_RPATH=ON
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_PREFIX=/usr
     -DCMAKE_C_COMPILER="${CC}"
     -DCMAKE_CXX_COMPILER="${CXX}"
-    -DCMAKE_C_FLAGS="${CFLAGS}"
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
     -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
@@ -143,43 +154,26 @@ build() {
   cmake -S "$_pkgname" -B build -G Ninja \
     "${_cmake_default[@]}" \
     -DOpenGL_GL_PREFERENCE=GLVND \
-    -DWITH_LLVM=ON \
-    -DUSE_LTO=ON \
     -DUSE_DISCORD_RPC=ON \
-    -DUSE_SDL=ON \
-    -DUSE_FAUDIO=ON \
-    -DUSE_LIBEVDEV=ON \
-    -DUSE_VULKAN=ON \
-    -DUSE_SYSTEM_CURL=ON \
+    -DUSE_SYSTEM_ZSTD=ON \
     -DUSE_SYSTEM_FFMPEG=ON \
-    -DUSE_SYSTEM_PROTOBUF=ON \
-    -DUSE_SYSTEM_GLSLANG=ON \
     -DUSE_SYSTEM_HIDAPI=ON \
     -DUSE_SYSTEM_LIBPNG=ON \
     -DUSE_SYSTEM_LIBUSB=ON \
-    -DUSE_SYSTEM_MINIUPNPC=ON \
     -DUSE_SYSTEM_OPENAL=ON \
-    -DUSE_SYSTEM_OPENCV=ON \
-    -DUSE_SYSTEM_PUGIXML=ON \
     -DUSE_SYSTEM_RTMIDI=ON \
-    -DUSE_SYSTEM_SDL=ON \
-    -DUSE_SYSTEM_ZLIB=ON \
-    -DUSE_SYSTEM_ZSTD=ON \
-    -DSTATIC_LINK_LLVM=OFF \
-    -DUSE_NATIVE_INSTRUCTIONS=OFF \
-    -DUSE_SYSTEM_WOLFSSL=OFF \
-    -DUSE_SYSTEM_VULKAN_MEMORY_ALLOCATOR=OFF \
-    -DUSE_SYSTEM_FAUDIO=OFF \
-    -DUSE_SYSTEM_CUBEB=OFF \
-    -DBUILD_LLVM=OFF \
-    -DBUILD_RPCS3_TESTS=OFF \
-    -DRUN_RPCS3_TESTS=OFF
+    -DUSE_SYSTEM_GLSLANG=ON \
+    -DUSE_SYSTEM_PUGIXML=ON \
+    -DUSE_SYSTEM_PROTOBUF=ON \
+    -DUSE_SYSTEM_MINIUPNPC=ON \
+    -DUSE_NATIVE_INSTRUCTIONS=OFF
   
   cmake --build build
 }
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
-  install -Dm644 "${_pkgname}/LICENSE" \
-    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  
+  install -Dm644 -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/LICENSE"
 }

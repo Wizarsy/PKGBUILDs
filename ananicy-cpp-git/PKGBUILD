@@ -14,14 +14,11 @@ arch=(x86_64)
 url=https://gitlab.com/ananicy-cpp/ananicy-cpp
 license=(GPL-3.0-or-later)
 depends=(
-  # glibc
-  # libgcc
-  # libelf
-  # libstdc++
   fmt
   libbpf
+  libelf
   pcre2
-  spdlog 
+  spdlog
   zlib
 )
 makedepends=(
@@ -30,19 +27,17 @@ makedepends=(
   cmake
   git
   lld
+  linux-headers
   llvm
   ninja
   nlohmann-json
+  pkgconf
 )
 options=(!lto)
 provides=("$_pkgname")
 conflicts=("$_pkgname")
-source=(
-  "git+${url}.git"
-  fix-missing-headers.patch
-)
-sha256sums=('SKIP'
-            '11c0ae8c1c544275cf17063676ab4523cfb9e7b39ee1e71eef9d613eeb807ea8')
+source=("git+${url}.git")
+sha256sums=('SKIP')
 
 pkgver() {
   cd "$_pkgname"
@@ -53,7 +48,6 @@ pkgver() {
 prepare() {
   cd "$_pkgname"
 
-  patch -p1 < ../fix-missing-headers.patch
 }
 
 build() {
@@ -64,6 +58,7 @@ build() {
   export CC CXX LDFLAGS
 
   _cmake_default=(
+    -Wno-author
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_SKIP_RPATH=ON
@@ -71,8 +66,8 @@ build() {
     -DCMAKE_INSTALL_PREFIX=/usr
     -DCMAKE_C_COMPILER="${CC}"
     -DCMAKE_CXX_COMPILER="${CXX}"
-    -DCMAKE_C_FLAGS="${CFLAGS}"
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS}"
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
     -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
@@ -94,7 +89,9 @@ build() {
 
 package() {
   DESTDIR="$pkgdir" cmake --install build --component Runtime
+  
   install -m755 -d "${pkgdir}/etc/ananicy.d"
-  install -Dm644 "${_pkgname}/LICENSE" \
-    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  install -Dm644  -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/LICENSE"
 }

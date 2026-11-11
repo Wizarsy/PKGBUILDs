@@ -1,0 +1,23 @@
+pkgbase = libretro-pcsx2-git
+	pkgdesc = A Sony PlayStation 2 emulator (libreto core)
+	pkgver = r20944.6516f15e0
+	pkgrel = 1
+	url = https://github.com/libretro/ps2
+	arch = x86_64
+	groups = libretro-cores-git
+	license = GPL-3.0-only
+	makedepends = clang
+	makedepends = git
+	makedepends = lld
+	makedepends = llvm
+	makedepends = make
+	makedepends = pkgconf
+	depends = libpcap
+	provides = libretro-pcsx2
+	provides = libretro-core
+	conflicts = libretro-pcsx2
+	options = lto
+	source = libretro-pcsx2::git+https://github.com/libretro/ps2.git
+	sha256sums = SKIP
+
+pkgname = libretro-pcsx2-git

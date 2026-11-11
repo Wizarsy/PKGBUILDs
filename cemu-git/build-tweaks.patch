@@ -1,0 +1,61 @@
+diff --color -uraw a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt	2026-11-10 03:46:05.746878266 -0300
++++ b/CMakeLists.txt	2026-11-10 03:47:43.009065854 -0300
+@@ -238,7 +238,7 @@
+ 
+ if (ENABLE_CUBEB)
+ 	if (NOT ENABLE_VCPKG)
+-	    find_package(cubeb)
++		find_package(cubeb QUIET)
+ 	endif()
+ 	if (NOT cubeb_FOUND)
+ 		option(BUILD_TESTS "" OFF)
+diff --color -uraw a/cmake/Findbluez.cmake b/cmake/Findbluez.cmake
+--- a/cmake/Findbluez.cmake	2026-11-10 03:46:05.817027034 -0300
++++ b/cmake/Findbluez.cmake	2026-11-10 03:46:32.326308416 -0300
+@@ -1,7 +1,7 @@
+ # SPDX-FileCopyrightText: 2022 Andrea Pappacoda <andrea@pappacoda.it>
+ # SPDX-License-Identifier: ISC
+ 
+-find_package(bluez CONFIG)
++find_package(bluez CONFIG QUIET)
+ if (NOT bluez_FOUND)
+   find_package(PkgConfig)
+   if (PKG_CONFIG_FOUND)
+diff --color -uraw a/cmake/Findlibusb.cmake b/cmake/Findlibusb.cmake
+--- a/cmake/Findlibusb.cmake	2026-11-10 03:46:05.817027034 -0300
++++ b/cmake/Findlibusb.cmake	2026-11-10 03:46:56.496285935 -0300
+@@ -1,7 +1,7 @@
+ # SPDX-FileCopyrightText: 2022 Andrea Pappacoda <andrea@pappacoda.it>
+ # SPDX-License-Identifier: ISC
+ 
+-find_package(libusb CONFIG)
++find_package(libusb CONFIG QUIET)
+ if (NOT libusb_FOUND)
+     find_package(PkgConfig)
+     if (PKG_CONFIG_FOUND)
+diff --color -uraw a/cmake/FindwxWidgets.cmake b/cmake/FindwxWidgets.cmake
+--- a/cmake/FindwxWidgets.cmake	2026-11-10 03:46:05.817027034 -0300
++++ b/cmake/FindwxWidgets.cmake	2026-11-10 12:42:10.850473279 -0300
+@@ -2,6 +2,9 @@
+ # SPDX-License-Identifier: ISC
+ 
+ include(FindPackageHandleStandardArgs)
++find_package(PkgConfig)
++find_package(NanoSVG)
++pkg_check_modules(APPINDICATOR IMPORTED_TARGET ayatana-appindicator3-0.1)
+ find_package(wxWidgets CONFIG COMPONENTS ${wxWidgets_FIND_COMPONENTS})
+ 
+ if (wxWidgets_FOUND)
+diff --color -uraw a/dist/linux/info.cemu.Cemu.desktop b/dist/linux/info.cemu.Cemu.desktop
+--- a/dist/linux/info.cemu.Cemu.desktop	2026-11-10 03:46:05.828895497 -0300
++++ b/dist/linux/info.cemu.Cemu.desktop	2026-11-11 07:40:12.036337000 -0300
+@@ -3,7 +3,7 @@
+ Type=Application
+ Terminal=false
+ Icon=info.cemu.Cemu
+-Exec=Cemu
++Exec=cemu
+ GenericName=Wii U Emulator
+ GenericName[fi]=Wii U -emulaattori
+ GenericName[el]=Πρόγραμμα προσομοίωσης Wii U

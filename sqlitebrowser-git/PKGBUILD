@@ -1,0 +1,84 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=sqlitebrowser
+pkgname=${_pkgname}-git
+pkgver=r4354.7bd0a1d0
+pkgrel=1
+pkgdesc='A light GUI editor for SQLite databases, built on top of Qt'
+arch=(x86_64)
+url=https://github.com/sqlitebrowser/sqlitebrowser
+license=(GPL-3.0-only)
+depends=(
+  hicolor-icon-theme
+  libcups
+  qt6-5compat
+  qt6-base
+  qscintilla-qt6
+  sqlcipher
+  sqlite
+)
+makedepends=(
+  clang
+  cmake
+  git
+  lld
+  llvm
+  ninja
+  pkgconf
+  qt6-tools
+  vulkan-headers
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+options=(!lto)
+source=("git+${url}.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS
+
+  _cmake_default=(
+    -Wno-author
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    -DCMAKE_SKIP_RPATH=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
+
+  cmake -S "$_pkgname" -B build -G Ninja \
+    "${_cmake_default[@]}" \
+    -DQT_MAJOR=Qt6 \
+    -Dsqlcipher=ON
+  
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+
+  install -Dm644 -t "${pkgdir}/usr/share/licenses/${pkgname}/" \
+    "${srcdir}/${_pkgname}/LICENSE"
+}
