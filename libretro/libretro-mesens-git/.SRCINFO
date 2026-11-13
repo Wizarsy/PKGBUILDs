@@ -1,0 +1,22 @@
+pkgbase = libretro-mesens-git
+	pkgdesc = Mesen-S is a cross-platform SNES emulator built in C++ (libretro-core)
+	pkgver = 0.4.0.r207.g9e4fdeb
+	pkgrel = 1
+	url = https://github.com/libretro/Mesen-S
+	arch = x86_64
+	groups = libretro-cores-git
+	license = GPL-3.0-or-later
+	makedepends = clang
+	makedepends = git
+	makedepends = lld
+	makedepends = llvm
+	makedepends = make
+	makedepends = pkgconf
+	provides = libretro-mesens
+	provides = libretro-core
+	conflicts = libretro-mesens
+	options = lto
+	source = libretro-mesens::git+https://github.com/libretro/Mesen-S.git
+	sha256sums = SKIP
+
+pkgname = libretro-mesens-git

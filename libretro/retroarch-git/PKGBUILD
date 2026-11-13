@@ -7,9 +7,10 @@
 
 _pkgname=retroarch
 pkgname=${_pkgname}-git
-pkgver=1.22.2.r10864.gab6a34d
+pkgver=1.22.2.r10995.gbfb8c15
 pkgrel=1
 pkgdesc='Cross-platform, sophisticated frontend for the libretro API'
+groups=(libretro-git)
 arch=(x86_64)
 url=https://github.com/libretro/RetroArch
 license=(GPL-3.0-only)

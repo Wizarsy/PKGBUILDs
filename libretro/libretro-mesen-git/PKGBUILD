@@ -1,0 +1,64 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=libretro-mesen
+pkgname=${_pkgname}-git
+pkgver=0.9.9.r342.g0102910
+pkgrel=1
+pkgdesc='Mesen is a cross-platform NES/Famicom emulator built in C++ (libretro-core)'
+groups=(
+  libretro-git
+  libretro-cores-git
+)
+arch=(x86_64)
+url=https://github.com/libretro/Mesen
+license=(GPL-3.0-or-later)
+# depends=(retroarch-git)
+makedepends=(
+  clang
+  git
+  lld
+  llvm
+  make
+  pkgconf
+)
+provides=(
+  "$_pkgname"
+  libretro-core
+)
+conflicts=("$_pkgname")
+options=(lto)
+source=(
+  "${_pkgname}::git+${url}.git"
+)
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  cd "$_pkgname"
+
+  CC=clang
+  CXX=clang++
+  AR="llvm-ar"
+  RANLIB="llvm-ranlib"
+  STRIP="llvm-strip"
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS AR RANLIB STRIP
+
+  make -C Libretro
+}
+
+package() {
+  install -v -Dm644 -t "${pkgdir}/usr/lib/libretro/" \
+    "${srcdir}/${_pkgname}/Libretro/mesen_libretro.so"
+}

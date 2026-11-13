@@ -1,0 +1,24 @@
+pkgbase = libretro-bsnes-git
+	pkgdesc = A Super Nintendo (SNES) emulator focused on performance, features, and ease of use (libretro-core)
+	pkgver = r4297.b51612a7
+	pkgrel = 1
+	url = https://github.com/libretro/bsnes-libretro
+	arch = x86_64
+	groups = libretro-git
+	groups = libretro-cores-git
+	license = GPL-3.0-or-later
+	makedepends = clang
+	makedepends = git
+	makedepends = lld
+	makedepends = llvm
+	makedepends = make
+	makedepends = pkgconf
+	depends = openmp
+	provides = libretro-bsnes
+	provides = libretro-core
+	conflicts = libretro-bsnes
+	options = lto
+	source = libretro-bsnes::git+https://github.com/libretro/bsnes-libretro.git
+	sha256sums = SKIP
+
+pkgname = libretro-bsnes-git

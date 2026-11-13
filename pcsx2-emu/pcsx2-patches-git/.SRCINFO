@@ -1,12 +1,12 @@
 pkgbase = pcsx2-patches-git
 	pkgdesc = A Sony PlayStation 2 emulator (patches)
-	pkgver = r671.a44ba70
+	pkgver = r674.192ee9b
 	pkgrel = 1
 	url = https://github.com/PCSX2/pcsx2_patches
 	arch = any
 	makedepends = 7zip
 	makedepends = git
-	depends = pcsx2
+	depends = pcsx2-git
 	provides = pcsx2-patches
 	conflicts = pcsx2-patches
 	source = pcsx2-patches::git+https://github.com/PCSX2/pcsx2_patches.git

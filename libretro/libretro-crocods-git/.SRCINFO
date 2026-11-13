@@ -1,0 +1,22 @@
+pkgbase = libretro-crocods-git
+	pkgdesc = Amstrad emulator for Nintendo DS (libretro-core)
+	pkgver = 0.1.r85.ga9c63b2
+	pkgrel = 1
+	url = https://github.com/libretro/libretro-crocods
+	arch = x86_64
+	groups = libretro-git
+	groups = libretro-cores-git
+	license = GPL-3.0-or-later
+	makedepends = clang
+	makedepends = git
+	makedepends = lld
+	makedepends = llvm
+	makedepends = make
+	provides = libretro-crocods
+	provides = libretro-core
+	conflicts = libretro-crocods
+	options = lto
+	source = libretro-crocods::git+https://github.com/libretro/libretro-crocods.git
+	sha256sums = SKIP
+
+pkgname = libretro-crocods-git

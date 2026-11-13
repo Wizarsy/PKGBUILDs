@@ -1,0 +1,22 @@
+pkgbase = libretro-genesis-plux-gx-git
+	pkgdesc = An enhanced port of Genesis Plus - accurate & portable Sega 8/16 bit emulator (libretro-core)
+	pkgver = r2403.b9c23164
+	pkgrel = 1
+	url = https://github.com/libretro/Genesis-Plus-GX
+	arch = x86_64
+	groups = libretro-cores-git
+	license = GPL-3.0-or-later
+	makedepends = clang
+	makedepends = git
+	makedepends = lld
+	makedepends = llvm
+	makedepends = make
+	makedepends = pkgconf
+	provides = libretro-genesis-plux-gx
+	provides = libretro-core
+	conflicts = libretro-genesis-plux-gx
+	options = lto
+	source = libretro-genesis-plux-gx::git+https://github.com/libretro/Genesis-Plus-GX.git
+	sha256sums = SKIP
+
+pkgname = libretro-genesis-plux-gx-git

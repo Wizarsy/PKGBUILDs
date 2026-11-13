@@ -7,37 +7,46 @@
 
 _pkgname=pcsx2
 pkgname=${_pkgname}-git
-pkgver=2.9.160.r0.ga6dc70b
+pkgver=2.9.178.r0.gc83f7bd
 pkgrel=1
 pkgdesc='A Sony PlayStation 2 emulator'
 arch=(x86_64)
 url=https://github.com/PCSX2/pcsx2
 license=(GPL-3.0-only)
 depends=(
-  # curl
+  alsa-lib
+  curl
   cpuinfo
+  dbus
   ffmpeg
-  # fontconfig
+  freetype2
+  fontconfig
   hicolor-icon-theme
   kddockwidgets
   libbacktrace
-  # libpng
-  # libwebp
-  # libdbus-1.so
+  libwebp
   libpcap
   libudev.so
+  libglvnd
+  libjpeg-turbo
+  libx11
   libxi
+  libxkbcommon
+  libxext
   libxrandr
   libzip
-  # lz4
+  jack
+  libpulse
+  lz4
   opengl-driver
   qt6-base
   qt6-declarative
   sdl3
+  sndio
+  wayland
   shaderc
-  # libjpeg-turbo
-  # zlib
-  # zstd
+  zlib
+  zstd
 )
 optdepends=("${_pkgname}_patches")
 makedepends=(
@@ -45,7 +54,6 @@ makedepends=(
   cmake
   extra-cmake-modules
   git
-  libglvnd
   lld
   llvm
   ninja
@@ -128,15 +136,13 @@ build() {
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DCMAKE_BUILD_TYPE=Release
-    -DCMAKE_INSTALL_RPATH="/usr/lib/PCSX2"
     -DCMAKE_PREFIX_PATH="${_external_deps}"
     -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
     -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
   )
 
-  cd "${srcdir}/libpng"
-  cmake -B build -G Ninja \
+  cmake -S libpng -B build-libpng -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG" \
@@ -146,31 +152,20 @@ build() {
     -DPNG_TESTS=OFF \
     -DPNG_STATIC=OFF \
     -DPNG_TOOLS=OFF
-  cmake --build build
-  cmake --install build
+  cmake --build build-libpng
+  cmake --install build-libpng
 
-  cd "${srcdir}/QtApng"
-  cmake -B build -G Ninja \
-    "${_cmake_default[@]}" \
-    -DCMAKE_CXX_COMPILER="${CXX}" \
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG" \
-    -DCMAKE_INSTALL_PREFIX="${_external_deps}"
-  cmake --build build
-  cmake --install build
-
-  cd "${srcdir}/plutovg"
-  cmake -B build -G Ninja \
+  cmake -S plutovg -B build-plutovg -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=OFF \
     -DPLUTOVG_BUILD_EXAMPLES=OFF 
-  cmake --build build
-  cmake --install build
+  cmake --build build-plutovg
+  cmake --install build-plutovg
 
-  cd "${srcdir}/plutosvg"
-  cmake -B build -G Ninja \
+  cmake -S plutosvg -B build-plutosvg -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG" \
@@ -178,20 +173,26 @@ build() {
     -DBUILD_SHARED_LIBS=OFF \
     -DPLUTOSVG_ENABLE_FREETYPE=OFF \
     -DPLUTOSVG_BUILD_EXAMPLES=OFF
-  cmake --build build
-  cmake --install build
+  cmake --build build-plutosvg
+  cmake --install build-plutosvg
 
-  cd "${srcdir}/rapidyaml"
-  cmake -B build -G Ninja \
+  cmake -S rapidyaml -B build-rapidyaml -G Ninja \
     "${_cmake_default[@]}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
     -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX="${_external_deps}" \
     -DBUILD_SHARED_LIBS=OFF
-  cmake --build build
-  cmake --install build
+  cmake --build build-rapidyaml
+  cmake --install build-rapidyaml
 
-  cd "$srcdir"
+  cmake -S QtApng -B build-QtApng -G Ninja \
+    "${_cmake_default[@]}" \
+    -DCMAKE_INSTALL_RPATH="/usr/lib/PCSX2" \
+    -DCMAKE_CXX_COMPILER="${CXX}" \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG" \
+    -DCMAKE_INSTALL_PREFIX="${_external_deps}"
+  cmake --build build-QtApng
+  cmake --install build-QtApng
 
   cmake -S "$_pkgname" -B build -G Ninja \
     "${_cmake_default[@]}" \
@@ -200,15 +201,13 @@ build() {
     -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG" \
     -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG" \
     -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_RPATH="/usr/lib/PCSX2" \
     -DOpenGL_GL_PREFERENCE=GLVND \
     -DQT_NO_PRIVATE_MODULE_WARNING=ON \
-    -DENABLE_QT_UI=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_Vtune=ON \
     -DPACKAGE_MODE=ON \
     -DUSE_LINKED_FFMPEG=ON \
-    -DUSE_VTUNE=OFF \
     -DENABLE_TESTS=OFF \
-    -DENABLE_SETCAP=OFF \
-    -DENABLE_GSRUNNER=OFF \
     -DDISABLE_ADVANCE_SIMD=OFF
   
   cmake --build build

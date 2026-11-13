@@ -1,6 +1,6 @@
 pkgbase = retroarch-git
 	pkgdesc = Cross-platform, sophisticated frontend for the libretro API
-	pkgver = 1.22.2.r10593.g0108ade
+	pkgver = 1.22.2.r10864.gab6a34d
 	pkgrel = 1
 	url = https://github.com/libretro/RetroArch
 	arch = x86_64

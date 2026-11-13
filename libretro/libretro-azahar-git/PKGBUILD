@@ -1,0 +1,193 @@
+# Maintainer: Filipe B. Madruga <filipemadruga@outlook.com>
+
+# shellcheck shell=bash
+# shellcheck disable=SC2164
+# shellcheck disable=SC2154
+# shellcheck disable=SC2034
+
+_pkgname=libretro-azahar
+pkgname=${_pkgname}-git
+pkgver=2127.0.rc2.r0.g6b4e7f2
+pkgrel=1
+pkgdesc='An open-source 3DS emulator project based on Citra (libretro-core)'
+groups=(
+  libretro-git
+  libretro-cores-git
+)
+arch=(x86_64)
+url=https://github.com/azahar-emu/azahar
+license=(GPL-2.0-or-later)
+depends=(
+  boost-libs
+  crypto++
+  enet
+  faad2
+  fmt
+  glslang
+  openssl
+  # retroarch-git
+  soundtouch
+  spirv-tools
+  xxhash
+  zlib
+  zstd
+)
+makedepends=(
+  boost
+  clang
+  cmake
+  git
+  libinih
+  lld
+  llvm
+  ninja
+  nlohmann-json
+  pkgconf
+  shaderc
+  spirv-headers
+  vulkan-icd-loader
+  vulkan-headers
+)
+provides=(
+  "$_pkgname"
+  libretro-core
+)
+conflicts=("$_pkgname")
+options=(!lto)
+source=(
+  "${_pkgname}::git+${url}.git"
+  vma::git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+  git+https://github.com/azahar-emu/compatibility-list.git
+  git+https://github.com/wwylele/teakra.git
+  git+https://github.com/herumi/xbyak.git
+  git+https://github.com/libretro/libretro-common.git
+  git+https://github.com/lvandeve/lodepng.git
+  git+https://github.com/azahar-emu/sirit.git
+  git+https://github.com/facebook/zstd.git
+  git+https://github.com/septag/dds-ktx.git
+  git+https://github.com/neobrain/nihstro.git
+  git+https://github.com/azahar-emu/dynarmic.git
+  git+https://github.com/azahar-emu/mcl.git
+  git+https://github.com/Tessil/robin-map.git
+  git+https://github.com/zyantific/zydis.git
+  git+https://github.com/azahar-emu/microtar.git
+  zycore::git+https://github.com/zyantific/zycore-c.git
+  build-tweaks.patch
+)
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'b1ba99227b0fdcd9014e46ac6293bf35205cf040139ea7b7ee37f803a746eb77')
+
+pkgver() {
+  cd "$_pkgname"
+
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd "$_pkgname"
+
+  patch -p1 < ../build-tweaks.patch
+
+  _submodules=(externals/{vma,teakra,dynarmic,xbyak,microtar,zstd,dds-ktx,nihstro,libretro-common/libretro-common,lodepng/lodepng,sirit/sirit})
+  for _submodule in "${_submodules[@]}"; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
+  done
+
+  git submodule set-url dist/compatibility_list "${srcdir}/compatibility-list"
+  git -c protocol.file.allow=always submodule update --init dist/compatibility_list
+
+  cd externals/dynarmic
+
+  for _submodule in externals/{mcl,robin-map,zydis,zycore}; do
+    git submodule set-url "${_submodule}" "${srcdir}/${_submodule##*/}"
+    git -c protocol.file.allow=always submodule update --init "${_submodule}"
+  done
+}
+
+build() {
+  CC=clang
+  CXX=clang++
+  LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+
+  export CC CXX LDFLAGS
+
+  _cmake_default=(
+    -Wno-author
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    -DCMAKE_SKIP_RPATH=ON
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_C_COMPILER="${CC}"
+    -DCMAKE_CXX_COMPILER="${CXX}"
+    -DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS}"
+    -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}"
+  )
+
+  _sse42=ON
+
+  if [ -z "$PACKAGECARCH" ] || ! [[ "$PACKAGECARCH" =~ x86_64_v[2-4] ]]; then
+    _sse42=OFF
+  fi
+
+  cmake -S "$_pkgname" -B build -G Ninja \
+    "${_cmake_default[@]}" \
+    -DENABLE_SSE42="${_sse42}" \
+    -DENABLE_LIBRETRO=ON \
+    -DUSE_SYSTEM_LIBS=ON \
+    -DUSE_SYSTEM_FAAD=ON \
+    -DUSE_SYSTEM_XXHASH=ON \
+    -DUSE_SYSTEM_SPIRV_TOOLS=ON \
+    -DDISABLE_SYSTEM_VMA=ON \
+    -DDISABLE_SYSTEM_ZSTD=ON \
+    -DDISABLE_SYSTEM_XBYAK=ON \
+    -DDISABLE_SYSTEM_LODEPNG=ON \
+    -DDISABLE_SYSTEM_DYNARMIC=ON \
+    -DDISABLE_SYSTEM_CPP_HTTPLIB=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_mcl=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_Zydis=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_tsl-robin-map=ON \
+    -DENABLE_QT=OFF \
+    -DENABLE_LTO=OFF \
+    -DENABLE_ROOM=OFF \
+    -DENABLE_SDL2=OFF \
+    -DENABLE_CUBEB=OFF \
+    -DENABLE_TESTS=OFF \
+    -DENABLE_LIBUSB=OFF \
+    -DENABLE_FFMPEG=OFF \
+    -DENABLE_OPENAL=OFF \
+    -DENABLE_FREECAM=OFF \
+    -DENABLE_GDBSTUB=OFF \
+    -DENABLE_SCRIPTING=OFF \
+    -DENABLE_WEB_SERVICE=OFF \
+    -DENABLE_ROOM_STANDALONE=OFF \
+    -DENABLE_NATIVE_OPTIMIZATION=OFF \
+    -DCITRA_USE_PRECOMPILED_HEADERS=OFF
+  
+  cmake --build build --target citra_libretro
+}
+
+package() {
+  install -v -Dm644 -t "${pkgdir}/usr/lib/libretro/" \
+    "${srcdir}/build/bin/Release/azahar_libretro.so"
+}

@@ -1,0 +1,22 @@
+pkgbase = libretro-mesen-git
+	pkgdesc = Mesen is a cross-platform NES/Famicom emulator built in C++ (libretro-core)
+	pkgver = 0.4.0.r207.g9e4fdeb
+	pkgrel = 1
+	url = https://github.com/libretro/Mesen
+	arch = x86_64
+	groups = libretro-cores-git
+	license = GPL-3.0-or-later
+	makedepends = clang
+	makedepends = git
+	makedepends = lld
+	makedepends = llvm
+	makedepends = make
+	makedepends = pkgconf
+	provides = libretro-mesen
+	provides = libretro-core
+	conflicts = libretro-mesen
+	options = lto
+	source = libretro-mesen::git+https://github.com/libretro/Mesen.git
+	sha256sums = SKIP
+
+pkgname = libretro-mesen-git
