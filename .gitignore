@@ -1,10 +1,10 @@
 *
-!**/.gitmodules
-!**/.gitignore
+!.gitmodules
+!.gitignore
 
-!**/PKGBUILD
-!**/REUSE.toml
-!**/LICENSE
-!**/.SRCINFO
-!**/0BSD.txt
-!**/*.patch
+!PKGBUILD
+!REUSE.toml
+!LICENSE
+!.SRCINFO
+!0BSD.txt
+!*.patch
