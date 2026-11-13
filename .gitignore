@@ -1,10 +1,15 @@
 *
-!.gitmodules
-!.gitignore
+!/**/
 
-!PKGBUILD
+/**/tmp
+/**/build
+/**/.local
+
 !REUSE.toml
 !LICENSE
-!.SRCINFO
 !0BSD.txt
+
+!PKGBUILD
+!.SRCINFO
+!.nvchecker.toml
 !*.patch
