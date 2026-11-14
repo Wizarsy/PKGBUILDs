@@ -40,21 +40,24 @@ pkgver() {
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
-prepare() {
-  cd "$_pkgname"
-
-  sed -Ei "s/-O3|-O2//" Makefile.libretro
-}
-
 build() {
   CC=clang
   CXX=clang++
-  AR="llvm-ar"
-  RANLIB="llvm-ranlib"
-  STRIP="llvm-strip"
+  LD="lld"
+  CFLAGS="${CFLAGS} -DNDEBUG"
+  CXXFLAGS="${CXXFLAGS} -DNDEBUG"
   LDFLAGS="${LDFLAGS} -fuse-ld=lld"
+  AR="llvm-ar"
+  NM="llvm-nm"
+  STRIP="llvm-strip"
+  OBJCOPY="llvm-objcopy"
+  OBJDUMP="llvm-objdump"
+  RANLIB="llvm-ranlib"
+  DLLTOOL="llvm-dlltool"
+  READELF="llvm-readelf"
+  ADDR2LINE="llvm-addr2line"
 
-  export CC CXX LDFLAGS AR RANLIB STRIP
+  export CC CXX LD CFLAGS CXX FLAGSLDFLAGS AR NM STRIP RANLIB OBJCOPY OBJDUMP DLLTOOL READELF ADDR2LINE
 
   make -C "$_pkgname" -f Makefile.libretro \
     platform=unix

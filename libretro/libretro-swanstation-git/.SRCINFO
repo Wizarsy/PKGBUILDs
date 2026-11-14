@@ -4,6 +4,7 @@ pkgbase = libretro-swanstation-git
 	pkgrel = 1
 	url = https://github.com/libretro/swanstation
 	arch = x86_64
+	groups = libretro-git
 	groups = libretro-cores-git
 	license = GPL-3.0-only
 	makedepends = clang

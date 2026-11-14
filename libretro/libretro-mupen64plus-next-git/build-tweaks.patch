@@ -1,0 +1,19 @@
+diff --color -uraw a/Makefile b/Makefile
+--- a/Makefile	2026-11-13 23:01:38.519309117 -0300
++++ b/Makefile	2026-11-13 23:19:40.563766298 -0300
+@@ -702,10 +702,13 @@
+ 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
+ endif
+ 
++$(ASM_DEFINES_OBJ): $(CORE_DIR)/src/asm_defines/asm_defines.c
++	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -fno-lto -o $@
++
+ # Script hackery fll or generating ASM include files for the new dynarec assembly code
+ $(AWK_DEST_DIR)/asm_defines_gas.h: $(AWK_DEST_DIR)/asm_defines_nasm.h
+-$(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ)
+-	$(STRINGS) "$<" | $(TR) -d '\r' | $(AWK) -v dest_dir="$(AWK_DEST_DIR)" -f $(CORE_DIR)/tools/gen_asm_defines.awk
++$(AWK_DEST_DIR)/asm_defines_nasm.h: $(ASM_DEFINES_OBJ) $(CORE_DIR)/tools/gen_asm_script.sh
++	bash $(CORE_DIR)/tools/gen_asm_script.sh $(AWK_DEST_DIR) "$(ASM_DEFINES_OBJ)"
+ 
+ %.o: %.asm $(AWK_DEST_DIR)/asm_defines_gas.h
+ 	$(NASM) -i$(AWK_DEST_DIR)/ $(ASFLAGS) $< -o $@

@@ -1,6 +1,6 @@
 pkgbase = libretro-bsnes-hd-beta-git
 	pkgdesc = A bsnes fork that adds HD video features (libretro-core)
-	pkgver = beta_10_6.r11.gfc26b25
+	pkgver = r57.fc26b25
 	pkgrel = 1
 	url = https://github.com/DerKoun/bsnes-hd
 	arch = x86_64
@@ -17,7 +17,7 @@ pkgbase = libretro-bsnes-hd-beta-git
 	provides = libretro-bsnes-hd-beta
 	provides = libretro-core
 	conflicts = libretro-bsnes-hd-beta
-	options = lto
+	options = !lto
 	source = libretro-bsnes-hd-beta::git+https://github.com/DerKoun/bsnes-hd.git
 	sha256sums = SKIP
 

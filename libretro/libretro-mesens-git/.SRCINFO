@@ -4,6 +4,7 @@ pkgbase = libretro-mesens-git
 	pkgrel = 1
 	url = https://github.com/libretro/Mesen-S
 	arch = x86_64
+	groups = libretro-git
 	groups = libretro-cores-git
 	license = GPL-3.0-or-later
 	makedepends = clang
